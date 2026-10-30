@@ -1,0 +1,27 @@
+{
+  "name": "beyachad-classroom-prototype",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "playwright test",
+    "format": "prettier --write src tests playwright.config.js index.html README.md package.json",
+    "export:html": "npm run build && node scripts/export-html.mjs"
+  },
+  "dependencies": {
+    "lucide-react": "^0.468.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "prettier": "^3.9.10",
+    "vite": "^6.4.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
