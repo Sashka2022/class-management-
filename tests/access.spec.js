@@ -125,11 +125,9 @@ test("admin totals persist across new lessons, undo is counted, completion is id
   await admin.goto("/?view=admin");
   await login(admin, "admin");
   const row = () =>
-    admin
-      .getByRole("row")
-      .filter({
-        has: admin.getByRole("rowheader", { name: "כיתה ג׳2", exact: true }),
-      });
+    admin.getByRole("row").filter({
+      has: admin.getByRole("rowheader", { name: "כיתה ג׳2", exact: true }),
+    });
   await expect(row().locator("td").nth(2)).toHaveText("0");
   await page.getByRole("button", { name: "לב לאיתי לוי", exact: true }).click();
   await expect(row().locator("td").nth(2)).toHaveText("1");

@@ -94,8 +94,8 @@ test("a complete lesson keeps private edits separate from the live projection", 
   const pub = await proj.evaluate(() =>
     JSON.parse(localStorage.getItem("beyachad-demo-v1-projection")),
   );
-  assert(!JSON.stringify(pub).includes("warning"));
-  assert(!JSON.stringify(pub).includes("students"));
+  assert(pub.students.every((p) => typeof p.warning === "number"));
+  assert(!JSON.stringify(pub).includes("summary"));
   await page
     .getByRole("button", { name: "מה עושים עכשיו?", exact: true })
     .click();
@@ -132,7 +132,7 @@ test("a complete lesson keeps private edits separate from the live projection", 
   assert.deepEqual(errors, []);
 });
 
-test("private warning actions and student import work without exposing discipline", async ({
+test("warning actions and student import update the classroom status board", async ({
   page,
   context,
 }) => {
@@ -161,7 +161,9 @@ test("private warning actions and student import work without exposing disciplin
   await expect(
     projection.getByRole("heading", { name: "מה צמחים צריכים כדי לגדול?" }),
   ).toBeVisible();
-  await expect(projection.locator("body")).not.toContainText("אזהרה");
+  await expect(
+    projection.getByRole("button", { name: "אזהרה 2 לאיתי לוי", exact: true }),
+  ).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });

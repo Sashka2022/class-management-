@@ -42,6 +42,7 @@ import {
   Presentation,
 } from "lucide-react";
 import "./style.css";
+import { MediaFrame, MediaPicker, StatusBoard } from "./content";
 import { Login, Admin } from "./access";
 import {
   LEGACY_KEY,
@@ -148,6 +149,8 @@ function initial() {
     slide: 0,
     projection: { type: "slides" },
     groups: [],
+    library: [],
+    video: null,
     timer: { remaining: 720, end: null },
     started: Date.now(),
     ended: false,
@@ -190,6 +193,17 @@ function publish(s, key = PUBLIC) {
     timer: s.timer,
     stage: { name: s.stages[s.stage].name },
     ended: s.ended,
+    video: s.video,
+    students: s.students.map(
+      ({ id, name, emoji, present, hearts, warning }) => ({
+        id,
+        name,
+        emoji,
+        present,
+        hearts,
+        warning,
+      }),
+    ),
   };
   localStorage.setItem(key, JSON.stringify(data));
 }
@@ -364,6 +378,7 @@ function ProjectedContent({ data }) {
       </div>
     );
   const type = data.projection.type;
+  if (type === "media") return <MediaFrame media={data.projection.media} />;
   if (type === "slides") return <Slide index={data.slide} />;
   if (type === "groups")
     return (
@@ -450,7 +465,13 @@ function Projector({ classId }) {
             <span>{data.ended ? "להתראות בשיעור הבא" : data.stage.name}</span>
             <span className="mono">{clock(seconds(data.timer))}</span>
           </div>
-          <ProjectedContent data={data} />
+          <div
+            className={`projector-content ${data.video ? "with-video" : ""}`}
+          >
+            <ProjectedContent data={data} />
+            {data.video && <MediaFrame media={data.video} />}
+          </div>
+          <StatusBoard students={data.students} />
           {!data.ended && seconds(data.timer) === 0 && (
             <p className="time-finished">הזמן הסתיים · מחכים להנחיית המחנכת</p>
           )}
@@ -1158,9 +1179,51 @@ function App({ classroom, onLogout }) {
                       onClick={() => setModal({ type: "preview" })}
                     />
                   </div>
-                  <div className="slide-container">
+                  <div
+                    className={`slide-container ${state.video ? "with-video" : ""}`}
+                  >
                     <ProjectedContent data={projectionData} />
+                    {state.video && (
+                      <div className="additional-content">
+                        <button
+                          className="close-video"
+                          aria-label="סגירת חלון נוסף"
+                          onClick={() =>
+                            update((s) => {
+                              s.video = null;
+                            })
+                          }
+                        >
+                          ×
+                        </button>
+                        <MediaFrame media={state.video} />
+                      </div>
+                    )}
                   </div>
+                  <StatusBoard
+                    students={state.students}
+                    onHeart={heart}
+                    onStudent={(id) => setModal({ type: "student", id })}
+                    onWarning={(id) => {
+                      const p = state.students.find((p) => p.id === id);
+                      if (p.warning >= 2)
+                        setModal({ type: "student", id, response: true });
+                      else
+                        update(
+                          (s) => {
+                            s.students.find((p) => p.id === id).warning++;
+                          },
+                          "האזהרה עודכנה גם בכיתה",
+                          true,
+                        );
+                    }}
+                  />
+                  <button
+                    className="content-open secondary"
+                    onClick={() => setModal({ type: "media" })}
+                  >
+                    <Plus size={15} /> תוכן, קבצים וקישורים
+                  </button>
                   <div className="slide-navigation">
                     <div className="slide-nav-buttons">
                       <IconButton
@@ -1469,11 +1532,32 @@ function App({ classroom, onLogout }) {
               finish: "משהו לקחת להמשך",
               preview: "זה מה שמוקרן עכשיו",
               template: "מתחילים מהתחלה טובה",
+              media: "מה מציגים היום?",
             }[modal.type]
           }
           onClose={() => setModal(null)}
           wide={["preview", "groups"].includes(modal.type)}
         >
+          {modal.type === "media" && (
+            <MediaPicker
+              library={state.library || []}
+              onAdd={(media) =>
+                update((s) => {
+                  s.library = [...(s.library || []), media];
+                }, "התוכן נוסף לספרייה, עדיין לא הוקרן")
+              }
+              onShow={(media) => {
+                project("media", { media });
+                setModal(null);
+              }}
+              onVideo={(media) => {
+                update((s) => {
+                  s.video = media;
+                }, "נפתח חלון תוכן נוסף בכיתה");
+                setModal(null);
+              }}
+            />
+          )}
           {modal.type === "about" && (
             <div className="modal-body">
               <div className="about-brand">
@@ -1482,8 +1566,8 @@ function App({ classroom, onLogout }) {
               </div>
               <p>
                 זהו אבטיפוס אינטראקטיבי עם נתוני הדגמה בלבד. אפשר לנסות מצגת,
-                שלבי שיעור, טיימר, נוכחות, לבבות ואזהרות פרטיות, קבוצות וכרטיסי
-                פעילות.
+                שלבי שיעור, טיימר, נוכחות, לבבות ואזהרות שמוצגים גם בכיתה,
+                קבוצות וכרטיסי פעילות.
               </p>
               <div className="notice">
                 <Info size={20} />
@@ -1491,7 +1575,8 @@ function App({ classroom, onLogout }) {
                   הנתונים נשמרים במחשב הזה בלבד. ההקרנה והשלט מסתנכרנים בין
                   לשוניות באותו דפדפן. הכניסה למורים ולאדמין היא הדגמה מקומית עם
                   סיסמה משותפת. אין עדיין שרת, חשבונות אישיים, חיבור QR או חיבור
-                  בין מכשירים. המצגת המובנית היא להדגמה; העלאת PDF תתווסף בהמשך.
+                  בין מכשירים. המצגת המובנית היא להדגמה; ניתן להעלות PDF,
+                  תמונות, אודיו ווידאו מתוך חלון התוכן.
                 </p>
               </div>
               <p>אין להזין מידע אמיתי על תלמידים באבטיפוס.</p>
@@ -1551,8 +1636,8 @@ function App({ classroom, onLogout }) {
           {modal.type === "students" && (
             <div className="modal-body">
               <p className="muted">
-                לב קטן על התמדה, עזרה או התקדמות. הפרגון נשאר פרטי עד שבוחרים
-                להקרין אותו.
+                לב קטן על התמדה, עזרה או התקדמות. הלבבות והאזהרות מופיעים לצד
+                התוכן גם בכיתה.
               </p>
               <label className="search">
                 <Search size={17} />
@@ -1627,7 +1712,7 @@ function App({ classroom, onLogout }) {
                   </div>
                   <div className="warning-box">
                     <strong>
-                      <Flag size={16} /> למחנכת בלבד
+                      <Flag size={16} /> מוצג גם בכיתה
                     </strong>
                     <p>
                       {p.warning === 0
@@ -1644,7 +1729,7 @@ function App({ classroom, onLogout }) {
                             update(
                               (s) =>
                                 s.students.find((x) => x.id === p.id).warning++,
-                              "האזהרה עודכנה באופן פרטי",
+                              "האזהרה עודכנה גם בכיתה",
                               true,
                             );
                           else
@@ -1803,7 +1888,10 @@ function App({ classroom, onLogout }) {
               </div>
               <div className="notice">
                 <Info size={18} />
-                <p>העלאת PDF אינה כלולה באבטיפוס הראשוני.</p>
+                <p>
+                  להעלאת PDF וקבצים נוספים בחרו „תוכן, קבצים וקישורים” במסך
+                  השיעור.
+                </p>
               </div>
             </div>
           )}
@@ -1984,6 +2072,7 @@ function App({ classroom, onLogout }) {
                     s.projection = { type: "slides" };
                     s.summary = "";
                     s.groups = [];
+                    s.video = null;
                     s.students.forEach((p) => {
                       p.hearts = 0;
                       p.warning = 0;
