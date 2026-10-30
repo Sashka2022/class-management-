@@ -171,3 +171,65 @@ test("class mode and quote journal can be opened from the sidebar on any page", 
     page.getByRole("button", { name: "שווה ציטוט", exact: true }),
   ).toBeVisible();
 });
+
+test("Hebrew mode labels fit every badge without splitting words, including narrow and extra-media views", async ({
+  page,
+  context,
+}) => {
+  async function verify(target, selector) {
+    await expect(target.locator(selector)).toBeVisible();
+    await expect
+      .poll(() =>
+        target.locator(selector).evaluate((badge) => {
+          const title = badge.querySelector("h2"),
+            text = title.firstChild,
+            bounds = badge.getBoundingClientRect();
+          if (!text) return false;
+          return [...title.textContent.matchAll(/\S+/g)].every((match) => {
+            const range = document.createRange();
+            range.setStart(text, match.index);
+            range.setEnd(text, match.index + match[0].length);
+            const rects = [...range.getClientRects()].filter(
+              (r) => r.width > 0,
+            );
+            return (
+              rects.length === 1 &&
+              rects.every(
+                (r) =>
+                  r.left >= bounds.left - 1 &&
+                  r.right <= bounds.right + 1 &&
+                  r.top >= bounds.top - 1 &&
+                  r.bottom <= bounds.bottom + 1,
+              )
+            );
+          });
+        }),
+      )
+      .toBe(true);
+  }
+  await page.getByRole("button", { name: "מצב כיתה", exact: true }).click();
+  await page.getByRole("button", { name: /מקשיבים יחד/ }).click();
+  for (const width of [1440, 1024, 768, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    await verify(page, ".slide-container>.class-mode-badge");
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const projection = await context.newPage();
+  await projection.goto("/?view=projector");
+  await verify(projection, ".projector-content>.class-mode-badge");
+  await page.getByRole("button", { name: "מצב כיתה", exact: true }).click();
+  await page
+    .getByLabel("כותרת מצב כיתה")
+    .fill("מקשיבים ומשתפים ברעיונות חדשים");
+  await page.getByRole("button", { name: "הצגת המצב שלי" }).click();
+  await page
+    .getByRole("button", { name: "תוכן, קבצים וקישורים", exact: true })
+    .click();
+  await page.getByLabel("קישור לאתר או YouTube").fill("https://example.com");
+  await page.getByRole("button", { name: "הוספת קישור", exact: true }).click();
+  await page.getByRole("button", { name: "חלון נוסף", exact: true }).click();
+  await verify(page, ".slide-container>.class-mode-badge");
+  await verify(projection, ".projector-content>.class-mode-badge");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await verify(page, ".slide-container>.class-mode-badge");
+});

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useLayoutEffect } from "react";
 import {
   Check,
   Trash2,
@@ -15,11 +15,63 @@ export const classModes = [
   { id: "movement", icon: "🙆", label: "הפסקת תנועה" },
 ];
 export function ClassModeBadge({ mode }) {
+  const badgeRef = useRef(null),
+    titleRef = useRef(null);
+  useLayoutEffect(() => {
+    const badge = badgeRef.current,
+      title = titleRef.current;
+    if (!badge || !title) return;
+    let active = true;
+    const fit = () => {
+      if (!active) return;
+      title.style.fontSize = "";
+      const style = getComputedStyle(badge),
+        row = style.flexDirection === "row";
+      const padding =
+        parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+      const siblings = [...badge.children].filter(
+        (el) => el !== title && getComputedStyle(el).display !== "none",
+      );
+      const available = Math.max(
+        12,
+        badge.clientHeight -
+          padding -
+          (row
+            ? 0
+            : siblings.reduce(
+                (n, el) => n + el.getBoundingClientRect().height,
+                0,
+              ) +
+              siblings.length * parseFloat(style.gap || 0)),
+      );
+      let size = parseFloat(getComputedStyle(title).fontSize);
+      while (
+        size > 4 &&
+        (title.scrollWidth > title.clientWidth + 1 ||
+          title.scrollHeight > available + 1)
+      ) {
+        size = Math.max(4, size - 0.5);
+        title.style.fontSize = `${size}px`;
+      }
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(badge);
+    document.fonts?.ready.then(fit);
+    return () => {
+      active = false;
+      observer.disconnect();
+    };
+  }, [mode?.label, mode?.icon]);
   return mode ? (
-    <aside className="class-mode-badge" aria-label="מצב הכיתה המוצג">
+    <aside
+      ref={badgeRef}
+      className="class-mode-badge"
+      aria-label="מצב הכיתה המוצג"
+    >
       <small>עכשיו בכיתה</small>
       <span aria-hidden="true">{mode.icon}</span>
-      <h2>{mode.label}</h2>
+      <h2 ref={titleRef}>{mode.label}</h2>
     </aside>
   ) : null;
 }

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { QRCodeCanvas } from "qrcode.react";
 import { classrooms, classKey, SESSION_KEY } from "./classrooms";
 const key = (id) => `beyachad-pair-${id}`;
 export async function pairRequest(body) {
@@ -30,6 +31,7 @@ export function usePairing(classroom, state, apply) {
         return null;
       }
     }),
+    [joined, setJoined] = useState(false),
     [status, setStatus] = useState(""),
     [error, setError] = useState("");
   const callback = useRef(apply),
@@ -41,6 +43,7 @@ export function usePairing(classroom, state, apply) {
       version.current = result.version;
       callback.current(result.state);
     }
+    setJoined(result.joined);
     setStatus(result.joined ? "מכשיר נוסף מחובר" : "ממתינים למכשיר נוסף");
     setError("");
   }
@@ -136,6 +139,7 @@ export function usePairing(classroom, state, apply) {
       }
       sessionStorage.removeItem(key(classroom.id));
       setConnection(null);
+      setJoined(false);
       setStatus("");
       setError("");
       version.current = -1;
@@ -143,25 +147,65 @@ export function usePairing(classroom, state, apply) {
       setError(e.message);
     }
   }
-  return { connection, status, error, create, disconnect, mutate };
+  return { connection, joined, status, error, create, disconnect, mutate };
 }
 export function PairPanel({ pair }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (!pair.connection?.code) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [pair.connection?.code]);
+  const expired = pair.connection?.codeExpires <= now;
+  const canJoin =
+    pair.connection?.code && !expired && !pair.joined && !pair.error;
+  const url = new URL(location.href);
+  url.search = "?view=join";
+  url.hash = canJoin ? `code=${pair.connection.code}` : "";
+  const localOnly =
+    location.protocol === "file:" ||
+    ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
   return (
     <div className="pair-panel">
       <h3>חיבור מכשיר נוסף</h3>
       <p>
-        במחשב יוצרים קוד, ובנייד פותחים את אותה כתובת אתר ובוחרים „חיבור עם
-        קוד”. הקוד חד־פעמי ותקף לעשר דקות; החיבור תקף עד ארבע שעות.
+        יוצרים קוד וסורקים בנייד את ה־QR. מסך החיבור ייפתח עם הקוד מוכן — לוחצים
+        „חיבור לשיעור”. אפשר גם להזין את הקוד ידנית. הקוד חד־פעמי ותקף לעשר
+        דקות; החיבור תקף עד ארבע שעות.
       </p>
       {pair.connection ? (
         <>
           <p role="status">{pair.status}</p>
-          {pair.connection.code && (
+          {canJoin && (
             <>
+              <div className="pair-qr">
+                <QRCodeCanvas
+                  value={url.href}
+                  size={224}
+                  marginSize={4}
+                  level="M"
+                  role="img"
+                  aria-label="QR לחיבור מכשיר המורה"
+                />
+                <strong>סרקי במצלמת הנייד</strong>
+              </div>
+              <small>או הזיני את הקוד ידנית:</small>
               <output className="pair-code">{pair.connection.code}</output>
-              <small>הקוד מיועד למורה בלבד.</small>
+              <small>
+                ה־QR והקוד מיועדים למורה בלבד, ואין להקרין אותם לכיתה.
+              </small>
+              {localOnly && (
+                <p className="form-error">
+                  הכתובת הנוכחית מקומית. לסריקה מטלפון פתחי במחשב את כתובת האתר
+                  הציבורית.
+                </p>
+              )}
             </>
           )}
+          {pair.connection.code && expired && !pair.joined && (
+            <p role="alert">תוקף הקוד פג. נתקי את החיבור וצרי קוד חדש.</p>
+          )}
+          {pair.joined && <p>הקוד וה־QR נוצלו ואינם זמינים לחיבור נוסף.</p>}
           <button className="secondary" onClick={pair.disconnect}>
             ניתוק החיבור
           </button>
@@ -184,13 +228,25 @@ export function PairPanel({ pair }) {
   );
 }
 export function JoinDevice({ onJoin, onBack }) {
-  const [code, setCode] = useState(""),
+  const [code, setCode] = useState(() => {
+      const value =
+        new URLSearchParams(location.hash.slice(1)).get("code") || "";
+      return /^\d{8}$/.test(value) ? value : "";
+    }),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (new URLSearchParams(location.hash.slice(1)).has("code"))
+      history.replaceState(null, "", location.pathname + location.search);
+  }, []);
   return (
     <main className="join-device panel">
       <h1>השיעור עובר לידיים שלך</h1>
-      <p>מזינים את הקוד שמופיע במחשב המורה.</p>
+      <p>
+        {/^\d{8}$/.test(code)
+          ? "הקוד מוכן. לחצו על „חיבור לשיעור” כדי להתחבר."
+          : "מזינים את הקוד שמופיע במחשב המורה."}
+      </p>
       <form
         onSubmit={async (e) => {
           e.preventDefault();
