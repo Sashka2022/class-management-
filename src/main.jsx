@@ -620,6 +620,16 @@ function App({ classroom, onLogout }) {
       }
     }, "התוכן עודכן במסך ההקרנה");
   }
+  function showGroups() {
+    if (!state.groups.some((g) => g.ids.length)) {
+      setToast({ message: "צרו חלוקה ושבצו תלמידים לפני ההקרנה." });
+      if (page !== "groups" && modal?.type !== "groups")
+        setModal({ type: "groups" });
+      return;
+    }
+    project("groups");
+    setModal(null);
+  }
   function navigateSlide(delta) {
     update((s) => {
       s.slide = Math.max(0, Math.min(3, s.slide + delta));
@@ -770,6 +780,13 @@ function App({ classroom, onLogout }) {
         <p className="muted">
           חלוקה אקראית של {present} התלמידים הנוכחים. בודקים, משנים ורק אז
           מקרינים.
+        </p>
+        <button className="primary group-project-action" onClick={showGroups}>
+          <Monitor size={17} /> הקרנת קבוצות
+        </button>
+        <p className="muted">
+          החלוקה תוצג בחלון ההקרנה עם שמות התלמידים, התפקידים והאייקונים. אפשר
+          לחזור למצגת מאותו שקף.
         </p>
         <RoleGuide />
         <div className="group-controls">
@@ -925,13 +942,7 @@ function App({ classroom, onLogout }) {
                 </div>
               ))}
             </div>
-            <button
-              className="primary"
-              onClick={() => {
-                project("groups");
-                setModal(null);
-              }}
-            >
+            <button className="primary" onClick={showGroups}>
               <Monitor size={17} /> הצג קבוצות לכיתה
             </button>
           </>
@@ -1244,6 +1255,13 @@ function App({ classroom, onLogout }) {
               <div className="remote-tools">
                 <button
                   className="secondary"
+                  aria-pressed={state.projection.type === "groups"}
+                  onClick={showGroups}
+                >
+                  <Monitor size={18} /> הקרנת קבוצות
+                </button>
+                <button
+                  className="secondary"
                   onClick={() => setModal({ type: "mode" })}
                 >
                   <span aria-hidden="true">🚦</span> מצב כיתה
@@ -1403,6 +1421,13 @@ function App({ classroom, onLogout }) {
                     }}
                   />
                   <div className="lesson-tools-row">
+                    <button
+                      className="secondary"
+                      aria-pressed={state.projection.type === "groups"}
+                      onClick={showGroups}
+                    >
+                      <Monitor size={15} /> הקרנת קבוצות
+                    </button>
                     <button
                       className="secondary"
                       onClick={() => setModal({ type: "media" })}
