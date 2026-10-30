@@ -1,72 +1,19 @@
 import React, { useState } from "react";
 import { Plus, Trash2, Copy, Save } from "lucide-react";
-export const lessonTemplates = [
-  {
-    id: "curiosity",
-    name: "שיעור של סקרנות",
-    emoji: "🌱",
-    description: "כניסה, גילוי משותף, קבוצות, שיתוף ומחשבה לדרך.",
-    steps: [
-      ["נכנסים לאווירה", 5],
-      ["מגלים יחד", 12],
-      ["צומחים בקבוצות", 15],
-      ["משתפים בתגליות", 8],
-      ["מחשבה לדרך", 5],
-    ],
-  },
-  {
-    id: "reading",
-    name: "קוראים ומגלים",
-    emoji: "📖",
-    description: "הטרמה, קריאה, שיחה וכתיבה עצמאית.",
-    steps: [
-      ["לפני הקריאה", 5],
-      ["קוראים יחד", 15],
-      ["משוחחים על הטקסט", 10],
-      ["כותבים בעצמנו", 10],
-      ["משתפים וסוגרים", 5],
-    ],
-  },
-  {
-    id: "practice",
-    name: "תרגול בקצב שלנו",
-    emoji: "✏️",
-    description: "הסבר קצר, תרגול מודרך ועבודה עצמאית.",
-    steps: [
-      ["חימום קצר", 5],
-      ["מדגימים יחד", 10],
-      ["מתרגלים בזוגות", 10],
-      ["עבודה עצמאית", 15],
-      ["בודקים ומסכמים", 5],
-    ],
-  },
-  {
-    id: "stations",
-    name: "לומדים בתחנות",
-    emoji: "🧩",
-    description: "פתיחה, שלוש תחנות וסיכום משותף.",
-    steps: [
-      ["היכרות עם התחנות", 5],
-      ["תחנה ראשונה", 10],
-      ["תחנה שנייה", 10],
-      ["תחנה שלישית", 10],
-      ["שיתוף וסיכום", 10],
-    ],
-  },
-];
 export function stagesFor(template) {
-  return template.stages
-    ? structuredClone(template.stages).map((s) => ({
-        ...s,
-        id: crypto.randomUUID(),
-      }))
-    : template.steps.map(([name, minutes]) => ({
-        id: crypto.randomUUID(),
-        name,
-        minutes,
-        instruction: name,
-        equipment: "",
-      }));
+  return structuredClone(template.stages).map((stage) => ({
+    ...stage,
+    id: crypto.randomUUID(),
+  }));
+}
+function blankStage() {
+  return {
+    id: crypto.randomUUID(),
+    name: "",
+    minutes: "",
+    instruction: "",
+    equipment: "",
+  };
 }
 export function DayPlan({ state, update, onShow }) {
   const [date, setDate] = useState(() =>
@@ -174,29 +121,58 @@ export function DayPlan({ state, update, onShow }) {
   );
 }
 export function Templates({ state, onUse, update }) {
-  const [name, setName] = useState("");
+  const [name, setName] = useState(""),
+    [stages, setStages] = useState(() => [blankStage()]),
+    [editing, setEditing] = useState(null),
+    [error, setError] = useState("");
+  function reset() {
+    setName("");
+    setStages([blankStage()]);
+    setEditing(null);
+    setError("");
+  }
+  function field(index, key, value) {
+    setStages((list) =>
+      list.map((s, i) => (i === index ? { ...s, [key]: value } : s)),
+    );
+  }
+  function save(e) {
+    e.preventDefault();
+    if (
+      !name.trim() ||
+      stages.some((s) => !s.name.trim() || !(Number(s.minutes) > 0))
+    ) {
+      setError("יש למלא שם לתבנית ושם ומשך לכל שלב.");
+      return;
+    }
+    const template = {
+      id: editing || crypto.randomUUID(),
+      name: name.trim(),
+      emoji: "⭐",
+      description: "תבנית קבועה של המורה",
+      stages: stages.map((s) => ({
+        ...s,
+        name: s.name.trim(),
+        minutes: Number(s.minutes),
+      })),
+    };
+    update((s) => {
+      s.customTemplates = editing
+        ? (s.customTemplates || []).map((t) =>
+            t.id === editing ? template : t,
+          )
+        : [...(s.customTemplates || []), template];
+    }, "התבנית נשמרה לשימוש חוזר");
+    reset();
+  }
   return (
     <>
-      <div className="template-save panel">
-        <h2>התבנית שלך</h2>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            update((s) => {
-              s.customTemplates = [
-                ...(s.customTemplates || []),
-                {
-                  id: crypto.randomUUID(),
-                  name: name.trim(),
-                  emoji: "⭐",
-                  description: "תבנית אישית שנשמרה ממהלך השיעור",
-                  stages: structuredClone(s.stages),
-                },
-              ];
-            }, "התבנית נשמרה");
-            setName("");
-          }}
-        >
+      <section className="template-save panel">
+        <h2>{editing ? "עריכת תבנית קבועה" : "יצירת תבנית ריקה"}</h2>
+        <p className="muted">
+          בלי תוכן מוכן מראש. מגדירים את השלבים שלכם ושומרים לשימוש חוזר.
+        </p>
+        <form className="blank-template-form" onSubmit={save}>
           <label className="field">
             שם לתבנית אישית
             <input
@@ -206,42 +182,140 @@ export function Templates({ state, onUse, update }) {
               onChange={(e) => setName(e.target.value)}
             />
           </label>
-          <button className="secondary" disabled={!name.trim()}>
-            <Save size={16} /> שמירת השיעור כתבנית
-          </button>
+          <div className="template-stages">
+            {stages.map((s, i) => (
+              <fieldset key={s.id}>
+                <legend>שלב {i + 1}</legend>
+                <label className="field">
+                  שם השלב
+                  <input
+                    aria-label={`שם שלב בתבנית ${i + 1}`}
+                    required
+                    value={s.name}
+                    onChange={(e) => field(i, "name", e.target.value)}
+                  />
+                </label>
+                <label className="field">
+                  משך בדקות
+                  <input
+                    aria-label={`משך שלב בתבנית ${i + 1}`}
+                    type="number"
+                    required
+                    min="1"
+                    max="120"
+                    value={s.minutes}
+                    onChange={(e) => field(i, "minutes", e.target.value)}
+                  />
+                </label>
+                <label className="field">
+                  הנחיה (לא חובה)
+                  <textarea
+                    aria-label={`הנחיה לשלב בתבנית ${i + 1}`}
+                    value={s.instruction}
+                    onChange={(e) => field(i, "instruction", e.target.value)}
+                  />
+                </label>
+                <label className="field">
+                  ציוד (לא חובה)
+                  <input
+                    aria-label={`ציוד לשלב בתבנית ${i + 1}`}
+                    value={s.equipment}
+                    onChange={(e) => field(i, "equipment", e.target.value)}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="text-button danger"
+                  disabled={stages.length === 1}
+                  onClick={() =>
+                    setStages((list) => list.filter((x) => x.id !== s.id))
+                  }
+                >
+                  מחיקת שלב {i + 1}
+                </button>
+              </fieldset>
+            ))}
+          </div>
+          <div className="template-editor-actions">
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => setStages((list) => [...list, blankStage()])}
+            >
+              <Plus size={16} /> הוספת שלב לתבנית
+            </button>
+            <button className="primary" type="submit">
+              <Save size={16} /> שמירת תבנית
+            </button>
+            <button type="button" className="text-button" onClick={reset}>
+              {editing ? "ביטול עריכה" : "ניקוי הטופס"}
+            </button>
+          </div>
+          {error && (
+            <p role="alert" className="form-error">
+              {error}
+            </p>
+          )}
         </form>
-      </div>
+        <button
+          className="text-button"
+          onClick={() => {
+            setStages(
+              structuredClone(state.stages).map((s) => ({
+                ...s,
+                id: crypto.randomUUID(),
+              })),
+            );
+            setEditing(null);
+          }}
+        >
+          טעינת מהלך השיעור הנוכחי לעריכה
+        </button>
+      </section>
+      {!(state.customTemplates || []).length && (
+        <section className="panel empty">
+          <h3>אין עדיין תבניות שמורות</h3>
+          <p>התבניות שיוצרים כאן יישמרו לכיתה גם לשיעורים הבאים.</p>
+        </section>
+      )}
       <section className="templates">
-        {[...lessonTemplates, ...(state.customTemplates || [])].map((t, i) => (
-          <div className="template-card" key={t.id}>
-            <span className="template-art">{t.emoji}</span>
+        {(state.customTemplates || []).map((t, i) => (
+          <article className="template-card" key={t.id}>
+            <span className="template-art">{t.emoji || "⭐"}</span>
             <span className="eyebrow">
-              {t.stages
-                ? t.stages.reduce((n, s) => n + s.minutes, 0)
-                : t.steps.reduce((n, s) => n + s[1], 0)}{" "}
-              דקות
+              {t.stages.reduce((n, s) => n + s.minutes, 0)} דקות ·{" "}
+              {t.stages.length} שלבים
             </span>
             <h2>{t.name}</h2>
-            <p>{t.description}</p>
             <button className="primary" onClick={() => onUse(t)}>
               <Copy size={17} />
               {i === 0 ? "שימוש בתבנית" : `שימוש ב${t.name}`}
             </button>
-            {t.stages && (
-              <button
-                className="text-button danger"
-                onClick={() =>
-                  update((s) => {
-                    s.customTemplates = s.customTemplates.filter(
-                      (x) => x.id !== t.id,
-                    );
-                  }, "התבנית נמחקה")
-                }
-              >
-                <Trash2 size={14} /> מחיקה
-              </button>
-            )}
-          </div>
+            <button
+              className="secondary"
+              onClick={() => {
+                setEditing(t.id);
+                setName(t.name);
+                setStages(structuredClone(t.stages));
+                setError("");
+              }}
+            >
+              עריכת תבנית {t.name}
+            </button>
+            <button
+              className="text-button danger"
+              onClick={() => {
+                update((s) => {
+                  s.customTemplates = (s.customTemplates || []).filter(
+                    (x) => x.id !== t.id,
+                  );
+                }, "התבנית נמחקה");
+                if (editing === t.id) reset();
+              }}
+            >
+              <Trash2 size={14} /> מחיקת תבנית {t.name}
+            </button>
+          </article>
         ))}
       </section>
     </>

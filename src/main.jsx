@@ -42,6 +42,7 @@ import {
   Presentation,
 } from "lucide-react";
 import "./style.css";
+import { ClassModeBadge, ModePicker, QuoteBook, QuoteSlide } from "./teaching";
 import { usePairing, PairPanel, JoinDevice } from "./pairing";
 import { DayPlan, Templates, stagesFor } from "./planning";
 import { MediaFrame, MediaPicker, StatusBoard } from "./content";
@@ -153,6 +154,8 @@ function initial() {
     groups: [],
     library: [],
     video: null,
+    classMode: null,
+    quotes: [],
     timer: { remaining: 720, end: null },
     started: Date.now(),
     ended: false,
@@ -196,6 +199,7 @@ function publish(s, key = PUBLIC) {
     stage: { name: s.stages[s.stage].name },
     ended: s.ended,
     video: s.video,
+    classMode: s.classMode,
     students: s.students.map(
       ({ id, name, emoji, present, hearts, warning }) => ({
         id,
@@ -380,6 +384,7 @@ function ProjectedContent({ data }) {
       </div>
     );
   const type = data.projection.type;
+  if (type === "quote") return <QuoteSlide quote={data.projection.quote} />;
   if (type === "day")
     return (
       <div className="activity projected-day">
@@ -488,6 +493,7 @@ function Projector({ classId }) {
           >
             <ProjectedContent data={data} />
             {data.video && <MediaFrame media={data.video} />}
+            {!data.ended && <ClassModeBadge mode={data.classMode} />}
           </div>
           <StatusBoard students={data.students} />
           {!data.ended && seconds(data.timer) === 0 && (
@@ -1188,7 +1194,20 @@ function App({ classroom, onLogout }) {
                 </button>
               </div>
               {timerControl()}
+              <ClassModeBadge mode={!state.ended && state.classMode} />
               <div className="remote-tools">
+                <button
+                  className="secondary"
+                  onClick={() => setModal({ type: "mode" })}
+                >
+                  <span aria-hidden="true">🚦</span> מצב כיתה
+                </button>
+                <button
+                  className="secondary"
+                  onClick={() => setModal({ type: "quotes" })}
+                >
+                  <span aria-hidden="true">❞</span> שווה ציטוט
+                </button>
                 <button className="secondary" onClick={() => project("task")}>
                   <Presentation />
                   מה עושים עכשיו?
@@ -1317,6 +1336,7 @@ function App({ classroom, onLogout }) {
                         <MediaFrame media={state.video} />
                       </div>
                     )}
+                    {!state.ended && <ClassModeBadge mode={state.classMode} />}
                   </div>
                   <StatusBoard
                     students={state.students}
@@ -1336,12 +1356,26 @@ function App({ classroom, onLogout }) {
                         );
                     }}
                   />
-                  <button
-                    className="content-open secondary"
-                    onClick={() => setModal({ type: "media" })}
-                  >
-                    <Plus size={15} /> תוכן, קבצים וקישורים
-                  </button>
+                  <div className="lesson-tools-row">
+                    <button
+                      className="secondary"
+                      onClick={() => setModal({ type: "media" })}
+                    >
+                      <Plus size={15} /> תוכן, קבצים וקישורים
+                    </button>
+                    <button
+                      className="secondary"
+                      onClick={() => setModal({ type: "mode" })}
+                    >
+                      <span aria-hidden="true">🚦</span> מצב כיתה
+                    </button>
+                    <button
+                      className="secondary"
+                      onClick={() => setModal({ type: "quotes" })}
+                    >
+                      <span aria-hidden="true">❞</span> שווה ציטוט
+                    </button>
+                  </div>
                   <div className="slide-navigation">
                     <div className="slide-nav-buttons">
                       <IconButton
@@ -1651,11 +1685,37 @@ function App({ classroom, onLogout }) {
               preview: "זה מה שמוקרן עכשיו",
               template: "מתחילים מהתחלה טובה",
               media: "מה מציגים היום?",
+              mode: "מצב כיתה",
+              quotes: "שווה ציטוט",
             }[modal.type]
           }
           onClose={() => setModal(null)}
           wide={["preview", "groups"].includes(modal.type)}
         >
+          {modal.type === "mode" && (
+            <ModePicker
+              selected={state.classMode}
+              onSelect={(mode) => {
+                update(
+                  (s) => {
+                    s.classMode = mode;
+                  },
+                  mode ? "מצב הכיתה עודכן לצד המצגת" : "מצב הכיתה הוסר",
+                );
+                setModal(null);
+              }}
+            />
+          )}
+          {modal.type === "quotes" && (
+            <QuoteBook
+              state={state}
+              update={update}
+              onShow={(quote) => {
+                project("quote", { quote });
+                setModal(null);
+              }}
+            />
+          )}
           {modal.type === "media" && (
             <MediaPicker
               library={state.library || []}
@@ -2211,6 +2271,7 @@ function App({ classroom, onLogout }) {
                     s.summary = "";
                     s.groups = [];
                     s.video = null;
+                    s.classMode = null;
                     s.students.forEach((p) => {
                       p.hearts = 0;
                       p.warning = 0;

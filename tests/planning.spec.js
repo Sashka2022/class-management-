@@ -1,3 +1,4 @@
+import { createTemplate } from "./helpers/templates";
 import { test, expect } from "@playwright/test";
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() =>
@@ -82,10 +83,12 @@ test("manual groups start empty and assign students; different and personal temp
     page.getByLabel("שיבוץ איתי לוי", { exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "תבניות שיעור", exact: true }).click();
-  await expect(page.locator(".template-card")).toHaveCount(4);
-  await page
-    .getByRole("button", { name: "שימוש בקוראים ומגלים", exact: true })
-    .click();
+  await expect(page.locator(".template-card")).toHaveCount(0);
+  await expect(page.getByLabel("שם שלב בתבנית 1", { exact: true })).toHaveValue(
+    "",
+  );
+  await createTemplate(page, "הקריאה שלנו");
+  await page.getByRole("button", { name: "שימוש בתבנית", exact: true }).click();
   await page
     .getByRole("button", { name: "פתיחת שיעור חדש", exact: true })
     .click();
@@ -93,9 +96,12 @@ test("manual groups start empty and assign students; different and personal temp
     page.getByRole("button", { name: "עריכת קוראים יחד", exact: true }),
   ).toHaveCount(1);
   await page.getByRole("button", { name: "תבניות שיעור", exact: true }).click();
-  await page.getByLabel("שם לתבנית אישית").fill("הקריאה שלנו");
-  await page.getByRole("button", { name: "שמירת השיעור כתבנית" }).click();
-  await expect(page.locator(".template-card")).toHaveCount(5);
+  await expect(page.locator(".template-card")).toHaveCount(1);
+  await createTemplate(page, "תרגול שלנו", "מתרגלים");
+  await expect(page.locator(".template-card")).toHaveCount(2);
+  await page.reload();
+  await page.getByRole("button", { name: "תבניות שיעור", exact: true }).click();
+  await expect(page.locator(".template-card")).toHaveCount(2);
 });
 test("a different browser joins by one-time code and controls the live class", async ({
   page,
@@ -151,4 +157,49 @@ test("a different browser joins by one-time code and controls the live class", a
   } finally {
     await remoteContext.close();
   }
+});
+
+test("teacher creates and edits a permanent blank template without coupling it to live lesson edits", async ({
+  page,
+}) => {
+  await page.getByRole("button", { name: "תבניות שיעור", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "אין עדיין תבניות שמורות" }),
+  ).toBeVisible();
+  await createTemplate(page, "תבנית קבועה", "שלב ראשון");
+  await page
+    .getByRole("button", { name: "עריכת תבנית תבנית קבועה", exact: true })
+    .click();
+  await page.getByLabel("שם לתבנית אישית").fill("התבנית המעודכנת");
+  await page
+    .getByRole("button", { name: "הוספת שלב לתבנית", exact: true })
+    .click();
+  await expect(page.getByLabel("שם שלב בתבנית 2", { exact: true })).toHaveValue(
+    "",
+  );
+  await page.getByLabel("שם שלב בתבנית 2", { exact: true }).fill("שלב שני");
+  await page.getByLabel("משך שלב בתבנית 2", { exact: true }).fill("5");
+  await page.getByRole("button", { name: "שמירת תבנית", exact: true }).click();
+  await expect(page.locator(".template-card")).toHaveCount(1);
+  await expect(page.locator(".template-card")).toContainText("2 שלבים");
+  await page.getByRole("button", { name: "שימוש בתבנית", exact: true }).click();
+  await page
+    .getByRole("button", { name: "פתיחת שיעור חדש", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "עריכת שלב ראשון", exact: true })
+    .click();
+  await page.getByLabel("הנחיה קצרה").fill("שינוי רק בשיעור הפעיל");
+  await page.getByRole("button", { name: "שמירת השלב", exact: true }).click();
+  await page.getByRole("button", { name: "תבניות שיעור", exact: true }).click();
+  await page
+    .getByRole("button", { name: "עריכת תבנית התבנית המעודכנת", exact: true })
+    .click();
+  await expect(
+    page.getByLabel("הנחיה לשלב בתבנית 1", { exact: true }),
+  ).toHaveValue("הנחיה שהמורה הגדיר");
+  await page
+    .getByRole("button", { name: "מחיקת תבנית התבנית המעודכנת", exact: true })
+    .click();
+  await expect(page.locator(".template-card")).toHaveCount(0);
 });

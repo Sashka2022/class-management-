@@ -1,3 +1,4 @@
+import { createTemplate } from "./helpers/templates";
 import { test, expect } from "@playwright/test";
 async function login(page, role = "teacher", classId = "g2") {
   await page
@@ -135,6 +136,7 @@ test("admin totals persist across new lessons, undo is counted, completion is id
   await endLesson(page);
   await expect(row().locator("td").nth(1)).toHaveText("1");
   await page.getByRole("button", { name: "תבניות שיעור", exact: true }).click();
+  await createTemplate(page);
   await page.getByRole("button", { name: "שימוש בתבנית", exact: true }).click();
   await page
     .getByRole("button", { name: "פתיחת שיעור חדש", exact: true })
