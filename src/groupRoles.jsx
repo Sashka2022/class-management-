@@ -47,6 +47,20 @@ export function roleFor(assignment) {
       }
     : null;
 }
+export function snapshotGroups(groups, students, assignments) {
+  return groups.map((group) => ({
+    ...group,
+    members: group.ids
+      .map((id) => students.find((p) => p.id === id))
+      .filter(Boolean)
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        emoji: p.emoji,
+        role: roleFor(assignments?.[p.id]),
+      })),
+  }));
+}
 export function RoleGuide() {
   return (
     <section className="role-guide" aria-label="הסבר ארבעת התפקידים">
@@ -119,10 +133,14 @@ export function ProjectedMembers({ members }) {
           <span>
             {p.emoji} {p.name}
           </span>
-          {p.role && (
+          {p.role ? (
             <span className="projected-role" title={p.role.label}>
               <span aria-hidden="true">{p.role.icon}</span>
-              <small>{p.role.label}</small>
+              <small>תפקיד: {p.role.label}</small>
+            </span>
+          ) : (
+            <span className="projected-role-empty">
+              <small>תפקיד: טרם נבחר</small>
             </span>
           )}
         </li>

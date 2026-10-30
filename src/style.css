@@ -4367,3 +4367,82 @@ select {
 .projector-content .projected-role small {
   font-size: 12px;
 }
+.quick-warning {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 36px;
+  min-height: 34px;
+  padding: 6px;
+  border: 1px solid #e0e5d7;
+  border-radius: 8px;
+  background: #f7f8f1;
+  color: #7c896e;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.quick-warning:hover {
+  background: #edf1e4;
+}
+.quick-warning.level-1 {
+  background: #fff3cb;
+  border-color: #ccb760;
+  color: #856512;
+}
+.quick-warning.level-2 {
+  background: #ffe1da;
+  border-color: #d08b7d;
+  color: #a13b2c;
+}
+@media (max-width: 750px) {
+  .quick-warning {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 7px;
+  }
+  .student-row {
+    gap: 7px;
+  }
+  .student-name strong {
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+}
+.projected-role-empty {
+  display: flex;
+  align-items: center;
+  background: #eef0e8;
+  color: #7d8772;
+  border-radius: 6px;
+  padding: 3px 6px;
+  white-space: nowrap;
+}
+.projected-role-empty small {
+  font-size: 10px;
+}
+.group-changes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid #d8c794;
+  background: #fbf4de;
+  border-radius: 10px;
+  margin: 15px 0;
+}
+.group-changes p {
+  font-size: 12px;
+  color: #8c7849;
+  line-height: 1.7;
+}
+.group-changes .primary {
+  margin-right: auto;
+}
+.projector-content .projected-role-empty {
+  padding: 2px 4px;
+}
+.projector-content .projected-role-empty small {
+  font-size: 12px;
+}

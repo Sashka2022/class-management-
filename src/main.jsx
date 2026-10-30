@@ -47,7 +47,7 @@ import {
   RoleGuide,
   RoleControls,
   ProjectedMembers,
-  roleFor,
+  snapshotGroups,
 } from "./groupRoles";
 import { ClassModeBadge, ModePicker, QuoteBook, QuoteSlide } from "./teaching";
 import { usePairing, PairPanel, JoinDevice } from "./pairing";
@@ -605,18 +605,11 @@ function App({ classroom, onLogout }) {
         s.projection.equipment = s.stages[s.stage].equipment;
       }
       if (type === "groups") {
-        s.projection.groups = s.groups.map((g) => ({
-          ...g,
-          members: g.ids
-            .map((id) => s.students.find((p) => p.id === id))
-            .filter(Boolean)
-            .map((p) => ({
-              id: p.id,
-              name: p.name,
-              emoji: p.emoji,
-              role: roleFor(s.groupRoles?.[p.id]),
-            })),
-        }));
+        s.projection.groups = snapshotGroups(
+          s.groups,
+          s.students,
+          s.groupRoles,
+        );
       }
     }, "התוכן עודכן במסך ההקרנה");
   }
@@ -660,6 +653,22 @@ function App({ classroom, onLogout }) {
         s.students.find((p) => p.id === id).hearts++;
       },
       "נוסף לב של עידוד",
+      true,
+    );
+  }
+  function warn(id) {
+    const student = state.students.find((p) => p.id === id);
+    if (!student) return;
+    if (student.warning >= 2) {
+      setModal({ type: "student", id, response: true });
+      return;
+    }
+    update(
+      (s) => {
+        const current = s.students.find((p) => p.id === id);
+        current.warning = Math.min(2, current.warning + 1);
+      },
+      "האזהרה עודכנה גם בכיתה",
       true,
     );
   }
@@ -756,6 +765,19 @@ function App({ classroom, onLogout }) {
                 <span>{p.hearts || ""}</span>
               </button>
               <button
+                className={`quick-warning level-${p.warning || 0}`}
+                aria-label={`אזהרה מהירה ל${p.name}, ${p.warning === 0 ? "ללא אזהרה" : p.warning === 1 ? "אזהרה ראשונה" : "אזהרה שנייה"}`}
+                title={
+                  p.warning >= 2
+                    ? "אירוע נוסף — בחירת תגובה"
+                    : `הוספת אזהרה ל${p.name}`
+                }
+                onClick={() => warn(p.id)}
+              >
+                <Flag size={17} />
+                <span>{p.warning || 0}</span>
+              </button>
+              <button
                 className={`attendance ${p.present ? "yes" : ""}`}
                 aria-label={`${p.present ? "סימון היעדרות" : "סימון נוכחות"}: ${p.name}`}
                 onClick={() => attendance(p.id)}
@@ -768,6 +790,11 @@ function App({ classroom, onLogout }) {
     );
   }
   function groupsPanel() {
+    const unpublished =
+      state.projection.type === "groups" &&
+      JSON.stringify(
+        snapshotGroups(state.groups, state.students, state.groupRoles),
+      ) !== JSON.stringify(state.projection.groups);
     return (
       <>
         <div className="section-heading">
@@ -788,6 +815,14 @@ function App({ classroom, onLogout }) {
           החלוקה תוצג בחלון ההקרנה עם שמות התלמידים, התפקידים והאייקונים. אפשר
           לחזור למצגת מאותו שקף.
         </p>
+        {unpublished && (
+          <div className="group-changes" role="status">
+            <p>יש שינויים בקבוצות או בתפקידים שעדיין לא הוקרנו.</p>
+            <button className="primary" onClick={showGroups}>
+              עדכון הקבוצות והתפקידים בהקרנה
+            </button>
+          </div>
+        )}
         <RoleGuide />
         <div className="group-controls">
           <label>
@@ -1406,19 +1441,7 @@ function App({ classroom, onLogout }) {
                     students={state.students}
                     onHeart={heart}
                     onStudent={(id) => setModal({ type: "student", id })}
-                    onWarning={(id) => {
-                      const p = state.students.find((p) => p.id === id);
-                      if (p.warning >= 2)
-                        setModal({ type: "student", id, response: true });
-                      else
-                        update(
-                          (s) => {
-                            s.students.find((p) => p.id === id).warning++;
-                          },
-                          "האזהרה עודכנה גם בכיתה",
-                          true,
-                        );
-                    }}
+                    onWarning={warn}
                   />
                   <div className="lesson-tools-row">
                     <button
@@ -1885,8 +1908,8 @@ function App({ classroom, onLogout }) {
           {modal.type === "students" && (
             <div className="modal-body">
               <p className="muted">
-                לב קטן על התמדה, עזרה או התקדמות. הלבבות והאזהרות מופיעים לצד
-                התוכן גם בכיתה.
+                לב לחיזוק ודגל לאזהרה — בלחיצה ליד שם התלמיד. הסימונים מופיעים
+                גם בכיתה. אחרי שתי אזהרות נדרשת בחירת תגובה.
               </p>
               <label className="search">
                 <Search size={17} />
@@ -1971,24 +1994,7 @@ function App({ classroom, onLogout }) {
                           : "אזהרה שנייה · אדום"}
                     </p>
                     <div className="student-actions">
-                      <button
-                        className="secondary"
-                        onClick={() => {
-                          if (p.warning < 2)
-                            update(
-                              (s) =>
-                                s.students.find((x) => x.id === p.id).warning++,
-                              "האזהרה עודכנה גם בכיתה",
-                              true,
-                            );
-                          else
-                            setModal({
-                              type: "student",
-                              id: p.id,
-                              response: true,
-                            });
-                        }}
-                      >
+                      <button className="secondary" onClick={() => warn(p.id)}>
                         {" "}
                         {p.warning < 2 ? "הוספת אזהרה" : "אירוע נוסף"}
                       </button>

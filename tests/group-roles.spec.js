@@ -101,15 +101,35 @@ test("projected roles are snapshots and only change on explicit publication; a n
     "אחראי/ת זמן",
   );
   await expect(projection.locator(".projected-role")).toContainText("⌛");
+  await expect(projection.locator(".projected-role")).toContainText(
+    "תפקיד: אחראי/ת זמן",
+  );
+  await expect(projection.locator(".projected-role-empty")).toHaveText(
+    "תפקיד: טרם נבחר",
+  );
+
   await page
     .getByLabel("תפקיד של איתי לוי", { exact: true })
     .selectOption("presenter");
   await expect(projection.locator(".projected-role")).toContainText(
     "אחראי/ת זמן",
   );
+  await expect(
+    page.getByText("יש שינויים בקבוצות או בתפקידים שעדיין לא הוקרנו.", {
+      exact: true,
+    }),
+  ).toBeVisible();
   await page
-    .getByRole("button", { name: "הצג קבוצות לכיתה", exact: true })
+    .getByRole("button", {
+      name: "עדכון הקבוצות והתפקידים בהקרנה",
+      exact: true,
+    })
     .click();
+  await expect(
+    page.getByText("יש שינויים בקבוצות או בתפקידים שעדיין לא הוקרנו.", {
+      exact: true,
+    }),
+  ).toHaveCount(0);
   await expect(projection.locator(".projected-role")).toContainText("מציג/ה");
   await page
     .getByRole("button", { name: "קבוצה ידנית חדשה", exact: true })
