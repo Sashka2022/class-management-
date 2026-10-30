@@ -4057,3 +4057,11 @@ select {
     font-size: 11px;
   }
 }
+@media (min-width: 951px) and (max-height: 850px) {
+  .sidebar .sidebar-note {
+    display: none;
+  }
+  .sidebar .sidebar-help {
+    margin-top: auto;
+  }
+}

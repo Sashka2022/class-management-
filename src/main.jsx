@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   Sprout,
+  MessageSquareQuote,
   LayoutDashboard,
   BookOpen,
   Users,
@@ -966,6 +967,8 @@ function App({ classroom, onLogout }) {
     ["class", Users, "הכיתה שלי"],
     ["groups", Shapes, "הקבוצות שלנו"],
     ["templates", Files, "תבניות שיעור"],
+    ["mode", Flag, "מצב כיתה"],
+    ["quotes", MessageSquareQuote, "שווה ציטוט"],
   ];
   return (
     <div className={remote ? "app remote-app" : "app"}>
@@ -996,15 +999,31 @@ function App({ classroom, onLogout }) {
             {nav.map(([id, Icon, label]) => (
               <button
                 key={id}
-                className={page === id ? "selected" : ""}
+                className={
+                  modal?.type === id ||
+                  (!["mode", "quotes"].includes(modal?.type) && page === id)
+                    ? "selected"
+                    : ""
+                }
+                aria-label={
+                  ["mode", "quotes"].includes(id)
+                    ? `פתיחת ${label} מתפריט הצד`
+                    : undefined
+                }
                 onClick={() => {
+                  if (["mode", "quotes"].includes(id)) {
+                    setModal({ type: id });
+                    return;
+                  }
                   setPage(id);
                   setQuery("");
                 }}
               >
                 <Icon size={20} />
                 {label}
-                {page === id && <span className="nav-dot" />}
+                {(modal?.type === id ||
+                  (!["mode", "quotes"].includes(modal?.type) &&
+                    page === id)) && <span className="nav-dot" />}
               </button>
             ))}
           </nav>

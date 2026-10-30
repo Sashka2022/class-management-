@@ -134,3 +134,40 @@ test("new lesson clears class mode and the mobile remote exposes both tools", as
     ),
   ).toBe(true);
 });
+
+test("class mode and quote journal can be opened from the sidebar on any page", async ({
+  page,
+}) => {
+  await page.getByRole("button", { name: "הכיתה שלי", exact: true }).click();
+  await page
+    .getByRole("button", { name: "פתיחת מצב כיתה מתפריט הצד", exact: true })
+    .click();
+  await expect(
+    page.getByRole("dialog", { name: "מצב כיתה", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /מקשיבים יחד/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "כל תלמיד הוא עולם.", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "פתיחת שווה ציטוט מתפריט הצד", exact: true })
+    .click();
+  await expect(
+    page.getByRole("dialog", { name: "שווה ציטוט", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByLabel("מה נאמר בכיתה?", { exact: true })
+    .fill("ציטוט שנשמר דרך התפריט");
+  await page.getByRole("button", { name: "שמירת ציטוט", exact: true }).click();
+  await expect(page.locator(".quote-card")).toContainText(
+    "ציטוט שנשמר דרך התפריט",
+  );
+  await page.getByRole("button", { name: "סגירה", exact: true }).click();
+  await page.getByRole("button", { name: "השיעור שלי", exact: true }).click();
+  await expect(
+    page.getByRole("complementary", { name: "מצב הכיתה המוצג" }),
+  ).toContainText("מקשיבים יחד");
+  await expect(
+    page.getByRole("button", { name: "שווה ציטוט", exact: true }),
+  ).toBeVisible();
+});
