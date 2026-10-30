@@ -4120,3 +4120,192 @@ select {
   flex: 1;
   flex-shrink: 1;
 }
+.role-guide {
+  padding: 20px;
+  background: #f1f4e9;
+  border: 1px solid #dce6ce;
+  border-radius: 12px;
+  margin: 20px 0;
+}
+.role-guide > h3 {
+  font-size: 16px;
+  color: #5a7447;
+}
+.role-guide > p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: #6e805d;
+  margin: 10px 0 15px;
+}
+.role-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.role-guide-grid article {
+  padding: 14px;
+  background: #fffefa;
+  border-radius: 9px;
+  border: 1px solid #e0e7d7;
+}
+.role-guide-grid article > span {
+  font-size: 28px;
+}
+.role-guide-grid h4 {
+  font-size: 13px;
+  margin: 10px 0;
+  color: #536c43;
+}
+.role-guide-grid p {
+  font-size: 11px;
+  line-height: 1.8;
+  color: #778967;
+  margin: 0;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.group-member {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.group-member > span {
+  min-width: 110px;
+}
+.group-member-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+.role-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.group-member-controls select {
+  max-width: 150px;
+  min-height: 34px;
+  font-size: 11px;
+}
+.group-member-controls .role-icon-select {
+  width: 53px;
+  max-width: 53px;
+  font-size: 18px;
+  padding: 4px;
+}
+.projected-members {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  min-width: 200px;
+}
+.projected-members li {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+  border-top: 1px solid #dce5ce;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.projected-members li > span:first-child {
+  text-align: right;
+}
+.projected-role {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  background: #f5f8ed;
+  border-radius: 6px;
+  padding: 3px 6px;
+  color: #5c7747;
+  white-space: nowrap;
+}
+.projected-role small {
+  font-size: 10px;
+}
+.projector-page .projected-members {
+  min-width: 260px;
+}
+.projector-page .projected-members li {
+  font-size: 20px;
+}
+.projector-page .projected-role small {
+  font-size: 15px;
+}
+.projector-page .projected-role > span {
+  font-size: 23px;
+}
+@media (max-width: 750px) {
+  .role-guide {
+    padding: 14px;
+  }
+  .role-guide-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .role-guide-grid article {
+    padding: 12px;
+  }
+  .group-member-controls {
+    width: 100%;
+    gap: 6px;
+  }
+  .group-member-controls select {
+    max-width: 140px;
+  }
+  .group-member-controls > .role-controls {
+    flex: 1;
+  }
+  .role-controls > select:first-child {
+    min-width: 0;
+    flex: 1;
+  }
+  .projected-members {
+    min-width: 0;
+  }
+  .projected-members li {
+    font-size: 10px;
+    flex-wrap: wrap;
+    gap: 3px;
+  }
+  .projected-role small {
+    font-size: 9px;
+  }
+  .projector-page .projected-members {
+    min-width: 0;
+  }
+  .projector-page .projected-members li {
+    font-size: 14px;
+  }
+  .projector-page .projected-role small {
+    font-size: 11px;
+  }
+}
+@media (max-width: 750px) {
+  .group-member-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .group-member-controls > .role-controls {
+    display: flex;
+    width: 100%;
+  }
+  .group-member-controls > .role-controls > select:first-child {
+    max-width: none;
+    min-height: 44px;
+  }
+  .group-member-controls > .role-controls > .role-icon-select {
+    min-height: 44px;
+    flex-shrink: 0;
+  }
+  .group-member-controls > select {
+    width: 100%;
+    max-width: none;
+    min-height: 44px;
+  }
+}

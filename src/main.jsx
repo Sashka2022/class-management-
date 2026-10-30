@@ -43,6 +43,12 @@ import {
   Presentation,
 } from "lucide-react";
 import "./style.css";
+import {
+  RoleGuide,
+  RoleControls,
+  ProjectedMembers,
+  roleFor,
+} from "./groupRoles";
 import { ClassModeBadge, ModePicker, QuoteBook, QuoteSlide } from "./teaching";
 import { usePairing, PairPanel, JoinDevice } from "./pairing";
 import { DayPlan, Templates, stagesFor } from "./planning";
@@ -153,6 +159,7 @@ function initial() {
     slide: 0,
     projection: { type: "slides" },
     groups: [],
+    groupRoles: {},
     library: [],
     video: null,
     classMode: null,
@@ -415,7 +422,7 @@ function ProjectedContent({ data }) {
               <h3>
                 {g.emoji} {g.name}
               </h3>
-              <p>{g.members.map((p) => p.name).join(" · ")}</p>
+              <ProjectedMembers members={g.members} />
             </div>
           ))}
         </div>
@@ -603,7 +610,12 @@ function App({ classroom, onLogout }) {
           members: g.ids
             .map((id) => s.students.find((p) => p.id === id))
             .filter(Boolean)
-            .map((p) => ({ name: p.name, emoji: p.emoji })),
+            .map((p) => ({
+              id: p.id,
+              name: p.name,
+              emoji: p.emoji,
+              role: roleFor(s.groupRoles?.[p.id]),
+            })),
         }));
       }
     }, "התוכן עודכן במסך ההקרנה");
@@ -759,6 +771,7 @@ function App({ classroom, onLogout }) {
           חלוקה אקראית של {present} התלמידים הנוכחים. בודקים, משנים ורק אז
           מקרינים.
         </p>
+        <RoleGuide />
         <div className="group-controls">
           <label>
             מספר קבוצות{" "}
@@ -868,29 +881,43 @@ function App({ classroom, onLogout }) {
                             {p.emoji} {p.name}
                             {!p.present && <small> · חסר/ה</small>}
                           </span>
-                          <select
-                            aria-label={`העברת ${p.name} לקבוצה`}
-                            value={g.id}
-                            onChange={(e) =>
-                              update((s) => {
-                                s.groups.forEach(
-                                  (x) =>
-                                    (x.ids = x.ids.filter((v) => v !== id)),
-                                );
-                                if (e.target.value)
-                                  s.groups
-                                    .find((x) => x.id === e.target.value)
-                                    .ids.push(id);
-                              }, "התלמיד הועבר בטיוטה")
-                            }
-                          >
-                            <option value="">ללא קבוצה</option>
-                            {state.groups.map((x) => (
-                              <option key={x.id} value={x.id}>
-                                {x.name}
-                              </option>
-                            ))}
-                          </select>
+                          <div className="group-member-controls">
+                            <RoleControls
+                              student={p}
+                              assignment={state.groupRoles?.[p.id]}
+                              onChange={(assignment) =>
+                                update((s) => {
+                                  s.groupRoles ||= {};
+                                  if (assignment)
+                                    s.groupRoles[p.id] = assignment;
+                                  else delete s.groupRoles[p.id];
+                                }, "התפקיד עודכן בטיוטה. להצגה בכיתה בחרו „הצג קבוצות לכיתה”.")
+                              }
+                            />
+                            <select
+                              aria-label={`העברת ${p.name} לקבוצה`}
+                              value={g.id}
+                              onChange={(e) =>
+                                update((s) => {
+                                  s.groups.forEach(
+                                    (x) =>
+                                      (x.ids = x.ids.filter((v) => v !== id)),
+                                  );
+                                  if (e.target.value)
+                                    s.groups
+                                      .find((x) => x.id === e.target.value)
+                                      .ids.push(id);
+                                }, "התלמיד הועבר בטיוטה")
+                              }
+                            >
+                              <option value="">ללא קבוצה</option>
+                              {state.groups.map((x) => (
+                                <option key={x.id} value={x.id}>
+                                  {x.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
                         </div>
                       )
                     );
@@ -2289,6 +2316,7 @@ function App({ classroom, onLogout }) {
                     s.projection = { type: "slides" };
                     s.summary = "";
                     s.groups = [];
+                    s.groupRoles = {};
                     s.video = null;
                     s.classMode = null;
                     s.students.forEach((p) => {
