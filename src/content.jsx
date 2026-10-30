@@ -120,12 +120,23 @@ export function MediaFrame({ media }) {
   );
 }
 export function StatusBoard({ students = [], onHeart, onWarning, onStudent }) {
+  const [compact, setCompact] = useState(false);
   return (
-    <section className="class-status-board" aria-label="סטטוס כל התלמידים">
+    <section
+      className={`class-status-board ${compact ? "compact" : ""}`}
+      aria-label="סטטוס כל התלמידים"
+    >
       <div className="status-board-heading">
         <strong>
           הכיתה שלנו <small>{students.length}</small>
         </strong>
+        <button
+          className="text-button"
+          aria-expanded={!compact}
+          onClick={() => setCompact(!compact)}
+        >
+          {compact ? "הרחבת תצוגת תלמידים" : "צמצום תצוגת תלמידים"}
+        </button>
         <span>♥ חיזוק · ⚑ אזהרה · ✓ נוכחות</span>
       </div>
       <div className="status-tiles" style={{ "--count": students.length }}>

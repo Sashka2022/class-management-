@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { classrooms, addClass, classMetrics } from "./classrooms";
 
-export function Login({ onLogin, requestedClass, admin = false }) {
+export function Login({ onLogin, requestedClass, admin = false, onPair }) {
   const [role, setRole] = useState(admin ? "admin" : "teacher"),
     [classId, setClassId] = useState(requestedClass || classrooms()[0].id),
     [password, setPassword] = useState(""),
@@ -152,9 +152,15 @@ export function Login({ onLogin, requestedClass, admin = false }) {
             {role === "teacher" ? "נכנסים לכיתה" : "למרחב האדמין"}
             <ArrowLeft size={18} />
           </button>
+          <button
+            type="button"
+            className="secondary pair-entry"
+            onClick={onPair}
+          >
+            חיבור עם קוד ממחשב המורה
+          </button>
           <p className="login-disclaimer">
-            באבטיפוס הכניסה והנתונים מקומיים לדפדפן. זו אינה מערכת הרשאות
-            מאובטחת.
+            הכניסה בסיסמה משותפת מיועדת להדגמה. השתמשו בנתוני דוגמה בלבד.
           </p>
         </form>
       </section>

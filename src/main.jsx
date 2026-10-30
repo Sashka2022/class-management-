@@ -42,6 +42,8 @@ import {
   Presentation,
 } from "lucide-react";
 import "./style.css";
+import { usePairing, PairPanel, JoinDevice } from "./pairing";
+import { DayPlan, Templates, stagesFor } from "./planning";
 import { MediaFrame, MediaPicker, StatusBoard } from "./content";
 import { Login, Admin } from "./access";
 import {
@@ -378,6 +380,22 @@ function ProjectedContent({ data }) {
       </div>
     );
   const type = data.projection.type;
+  if (type === "day")
+    return (
+      <div className="activity projected-day">
+        <h2>סדר היום שלנו</h2>
+        <p>{data.projection.date}</p>
+        <div>
+          {data.projection.rows.map((r) => (
+            <div key={r.id}>
+              <strong>{r.time}</strong>
+              <span>{r.title}</span>
+              <small>{r.note}</small>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   if (type === "media") return <MediaFrame media={data.projection.media} />;
   if (type === "slides") return <Slide index={data.slide} />;
   if (type === "groups")
@@ -511,6 +529,12 @@ function App({ classroom, onLogout }) {
     [rosterText, setRosterText] = useState(""),
     [phaseForm, setPhaseForm] = useState(null),
     [summary, setSummary] = useState("");
+  function applyPaired(next) {
+    localStorage.setItem(KEY, JSON.stringify(next));
+    publish(next, PUBLIC);
+    setState(next);
+  }
+  const pair = usePairing(classroom, state, applyPaired);
   const remote = new URLSearchParams(location.search).get("view") === "remote";
   useEffect(() => {
     publish(state, PUBLIC);
@@ -531,6 +555,21 @@ function App({ classroom, onLogout }) {
     return () => clearTimeout(t);
   }, [toast]);
   function update(fn, message, undo = false) {
+    if (pair.connection) {
+      pair
+        .mutate(fn)
+        .then(({ previous, next }) => {
+          if (message)
+            setToast({
+              message,
+              previous: undo ? previous : null,
+              after: undo ? next : null,
+            });
+        })
+        .catch((e) => setToast({ message: e.message }));
+      return;
+    }
+
     const previous = readCurrent();
     const next = structuredClone(previous);
     fn(next);
@@ -733,11 +772,82 @@ function App({ classroom, onLogout }) {
             <Shuffle size={17} /> חלוקה חדשה
           </button>
         </div>
+        <button
+          className="secondary"
+          onClick={() =>
+            update((s) => {
+              s.groups.push({
+                id: crypto.randomUUID(),
+                name: `קבוצה ${s.groups.length + 1}`,
+                emoji: "⭐",
+                ids: [],
+              });
+            }, "נוספה קבוצה ידנית")
+          }
+        >
+          <Plus size={16} /> קבוצה ידנית חדשה
+        </button>
+        <div className="unassigned">
+          <h3>תלמידים שטרם שובצו</h3>
+          {state.students
+            .filter((p) => !state.groups.some((g) => g.ids.includes(p.id)))
+            .map((p) => (
+              <label key={p.id}>
+                {p.emoji} {p.name}
+                {!p.present ? " · חסר/ה" : ""}
+                <select
+                  aria-label={`שיבוץ ${p.name}`}
+                  value=""
+                  onChange={(e) =>
+                    update((s) => {
+                      s.groups.forEach(
+                        (g) => (g.ids = g.ids.filter((id) => id !== p.id)),
+                      );
+                      s.groups
+                        .find((g) => g.id === e.target.value)
+                        .ids.push(p.id);
+                    }, "התלמיד שובץ בקבוצה")
+                  }
+                >
+                  <option value="">בחירת קבוצה</option>
+                  {state.groups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ))}
+        </div>
         {state.groups.length ? (
           <>
             <div className="groups-grid">
               {state.groups.map((g) => (
                 <div className="group-card" key={g.id}>
+                  <label className="field">
+                    שם הקבוצה
+                    <input
+                      aria-label={`שם קבוצה ${g.id}`}
+                      value={g.name}
+                      onChange={(e) =>
+                        update(
+                          (s) =>
+                            (s.groups.find((x) => x.id === g.id).name =
+                              e.target.value),
+                        )
+                      }
+                    />
+                  </label>
+                  <button
+                    className="text-button danger"
+                    onClick={() =>
+                      update((s) => {
+                        s.groups = s.groups.filter((x) => x.id !== g.id);
+                      }, "הקבוצה נמחקה; התלמידים זמינים לשיבוץ")
+                    }
+                  >
+                    מחיקת קבוצה
+                  </button>
                   <h3>
                     {g.emoji} {g.name}
                     <small>{g.ids.length}</small>
@@ -760,12 +870,14 @@ function App({ classroom, onLogout }) {
                                   (x) =>
                                     (x.ids = x.ids.filter((v) => v !== id)),
                                 );
-                                s.groups
-                                  .find((x) => x.id === e.target.value)
-                                  .ids.push(id);
+                                if (e.target.value)
+                                  s.groups
+                                    .find((x) => x.id === e.target.value)
+                                    .ids.push(id);
                               }, "התלמיד הועבר בטיוטה")
                             }
                           >
+                            <option value="">ללא קבוצה</option>
                             {state.groups.map((x) => (
                               <option key={x.id} value={x.id}>
                                 {x.name}
@@ -926,6 +1038,11 @@ function App({ classroom, onLogout }) {
             </strong>
           </div>
           <div className="top-actions">
+            {pair.connection && (
+              <span className="pair-state" role="status">
+                {pair.error || pair.status}
+              </span>
+            )}
             <button className="logout-button" onClick={onLogout}>
               <LogOut size={15} /> יציאה
             </button>
@@ -1096,6 +1213,12 @@ function App({ classroom, onLogout }) {
                 </button>
               </div>
             </div>
+          ) : page === "home" ? (
+            <DayPlan
+              state={state}
+              update={update}
+              onShow={(data) => project("day", data)}
+            />
           ) : page === "class" ? (
             <section className="panel roster-panel">
               <div className="panel-heading">
@@ -1113,6 +1236,15 @@ function App({ classroom, onLogout }) {
                   <Plus size={16} /> הוספת תלמידים
                 </button>
               </div>
+              <button
+                className="secondary bulk-entry"
+                onClick={() => {
+                  setRosterText("");
+                  setModal({ type: "add" });
+                }}
+              >
+                הדבקת רשימת תלמידים
+              </button>
               <div className="roster-summary">
                 <span>
                   <i className="online-dot" />
@@ -1137,28 +1269,14 @@ function App({ classroom, onLogout }) {
           ) : page === "groups" ? (
             <section className="panel groups-page">{groupsPanel()}</section>
           ) : page === "templates" ? (
-            <section className="templates">
-              <div className="template-card">
-                <span className="template-art">🌱</span>
-                <span className="eyebrow">45 דקות · 5 שלבים</span>
-                <h2>שיעור של סקרנות</h2>
-                <p>כניסה, גילוי משותף, קבוצות, שיתוף ומחשבה לדרך.</p>
-                <button
-                  className="primary"
-                  onClick={() => {
-                    setPhaseForm({ mode: "template" });
-                    setModal({ type: "template" });
-                  }}
-                >
-                  <Copy size={17} /> שימוש בתבנית
-                </button>
-              </div>
-              <div className="template-note">
-                <Sprout size={38} />
-                <h2>הבסיס כבר כאן. הטאץ׳ הוא שלך.</h2>
-                <p>אפשר להתאים את השלבים, הזמנים וההנחיות מתוך מסך השיעור.</p>
-              </div>
-            </section>
+            <Templates
+              state={state}
+              update={update}
+              onUse={(template) => {
+                setPhaseForm({ mode: "template", template });
+                setModal({ type: "template" });
+              }}
+            />
           ) : (
             <>
               <div className="lesson-layout">
@@ -1572,11 +1690,10 @@ function App({ classroom, onLogout }) {
               <div className="notice">
                 <Info size={20} />
                 <p>
-                  הנתונים נשמרים במחשב הזה בלבד. ההקרנה והשלט מסתנכרנים בין
-                  לשוניות באותו דפדפן. הכניסה למורים ולאדמין היא הדגמה מקומית עם
-                  סיסמה משותפת. אין עדיין שרת, חשבונות אישיים, חיבור QR או חיבור
-                  בין מכשירים. המצגת המובנית היא להדגמה; ניתן להעלות PDF,
-                  תמונות, אודיו ווידאו מתוך חלון התוכן.
+                  הנתונים נשמרים בדפדפן. חיבור מכשיר נוסף עם קוד משתף את מצב
+                  השיעור דרך שרת למשך החיבור. באתר נדרשת הגדרת אחסון Redis.
+                  הכניסה בסיסמה המשותפת היא להדגמה, ללא חשבונות אישיים. ניתן
+                  להעלות PDF, תמונות, אודיו ווידאו מתוך חלון התוכן.
                 </p>
               </div>
               <p>אין להזין מידע אמיתי על תלמידים באבטיפוס.</p>
@@ -1603,6 +1720,7 @@ function App({ classroom, onLogout }) {
           )}
           {modal.type === "connect" && (
             <div className="modal-body">
+              <PairPanel pair={pair} />
               <div className="connect-art">
                 <Smartphone size={58} />
                 <span>↔</span>
@@ -1616,8 +1734,8 @@ function App({ classroom, onLogout }) {
               <div className="notice">
                 <Info size={20} />
                 <p>
-                  חיבור בין הטלפון למחשב וסריקת QR עדיין אינם זמינים. אין כאן
-                  חיבור מאובטח בין מכשירים.
+                  קוד החיבור משתמש בשרת הסנכרון. ב־Vercel יש להגדיר אחסון Redis
+                  לפני השימוש. השלט בלשונית נוספת ממשיך לעבוד באותו דפדפן.
                 </p>
               </div>
               <button
@@ -1997,6 +2115,21 @@ function App({ classroom, onLogout }) {
                 שיהיה קל להבחין ביניהם.
               </p>
               <label className="field">
+                טעינת רשימה מקובץ טקסט
+                <input
+                  type="file"
+                  accept=".txt,text/plain"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) setRosterText(await file.text());
+                  }}
+                />
+              </label>
+              <p className="muted">
+                {rosterText.split("\n").filter((x) => x.trim()).length} תלמידים
+                ברשימה · שם בכל שורה
+              </p>
+              <label className="field">
                 שמות תלמידים
                 <textarea
                   required
@@ -2063,9 +2196,14 @@ function App({ classroom, onLogout }) {
                     s.lessonId = fresh.lessonId;
                     s.lessonHearts = 0;
                     s.endedAt = null;
-                    s.stages = fresh.stages;
+                    s.stages = phaseForm?.template
+                      ? stagesFor(phaseForm.template)
+                      : fresh.stages;
                     s.stage = 0;
-                    s.timer = { remaining: 300, end: null };
+                    s.timer = {
+                      remaining: s.stages[0].minutes * 60,
+                      end: null,
+                    };
                     s.started = Date.now();
                     s.ended = false;
                     s.slide = 0;
@@ -2095,6 +2233,7 @@ function Entry() {
   const params = new URLSearchParams(location.search),
     view = params.get("view"),
     requestedClass = params.get("class");
+  const [joining, setJoining] = useState(view === "join");
   const [session, setSession] = useState(() => {
     try {
       return JSON.parse(sessionStorage.getItem(SESSION_KEY));
@@ -2108,9 +2247,13 @@ function Entry() {
       url.searchParams.set("view", "admin");
       url.searchParams.delete("class");
     } else {
-      if (url.searchParams.get("view") !== "remote")
+      if (url.searchParams.get("view") !== "remote" && !joining)
         url.searchParams.delete("view");
       url.searchParams.set("class", next.classId);
+    }
+    if (joining) {
+      url.searchParams.set("view", "remote");
+      setJoining(false);
     }
     history.replaceState(null, "", url);
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(next));
@@ -2120,6 +2263,16 @@ function Entry() {
     sessionStorage.removeItem(SESSION_KEY);
     setSession(null);
   }
+  if (joining)
+    return (
+      <JoinDevice
+        onJoin={login}
+        onBack={() => {
+          history.replaceState(null, "", location.pathname);
+          setJoining(false);
+        }}
+      />
+    );
   if (view === "projector") {
     const id = requestedClass || "g2";
     return classrooms().some((c) => c.id === id) ? (
@@ -2149,6 +2302,7 @@ function Entry() {
       }
       admin={view === "admin"}
       onLogin={login}
+      onPair={() => setJoining(true)}
     />
   );
 }
