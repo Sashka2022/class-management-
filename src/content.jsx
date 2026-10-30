@@ -56,6 +56,17 @@ function embed(url) {
   }
   return url;
 }
+export function FreeTextSlide({ media }) {
+  return (
+    <article
+      className={`free-text-slide ${(media.text || "").length > 600 ? "long-text" : ""}`}
+      aria-label="טקסט חופשי מוקרן"
+    >
+      {media.title && <h2>{media.title}</h2>}
+      <div className="free-text-body">{media.text}</div>
+    </article>
+  );
+}
 export function MediaFrame({ media }) {
   const [src, setSrc] = useState(""),
     [error, setError] = useState("");
@@ -64,6 +75,7 @@ export function MediaFrame({ media }) {
       object;
     setSrc("");
     setError("");
+    if (media.kind === "text") return;
     if (media.url) {
       setSrc(embed(media.url));
       return;
@@ -81,7 +93,8 @@ export function MediaFrame({ media }) {
       active = false;
       if (object) URL.revokeObjectURL(object);
     };
-  }, [media.id, media.url]);
+  }, [media.id, media.url, media.kind]);
+  if (media.kind === "text") return <FreeTextSlide media={media} />;
   return (
     <div className="media-frame">
       {error ? (
@@ -185,6 +198,28 @@ export function StatusBoard({ students = [], onHeart, onWarning, onStudent }) {
   );
 }
 export function MediaPicker({ library, onAdd, onShow, onVideo }) {
+  const [textTitle, setTextTitle] = useState(""),
+    [textBody, setTextBody] = useState(""),
+    [editingText, setEditingText] = useState(null);
+  function clearText() {
+    setTextTitle("");
+    setTextBody("");
+    setEditingText(null);
+  }
+  function saveText(project) {
+    const text = textBody.trim();
+    if (!text) return;
+    const item = {
+      id: editingText || crypto.randomUUID(),
+      kind: "text",
+      title: textTitle.trim(),
+      name: textTitle.trim() || text.split("\n")[0].slice(0, 60),
+      text,
+    };
+    if (project) onShow(item);
+    else onAdd(item);
+    clearText();
+  }
   const [url, setUrl] = useState(""),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
@@ -221,6 +256,56 @@ export function MediaPicker({ library, onAdd, onShow, onVideo }) {
       <p className="muted">
         טוענים תוכן לספרייה, ואז בוחרים מה להציג. קבצים נשמרים בדפדפן הזה בלבד.
       </p>
+      <form
+        className="free-text-editor"
+        onSubmit={(e) => {
+          e.preventDefault();
+          saveText(true);
+        }}
+      >
+        <h3>{editingText ? "עריכת טקסט חופשי" : "טקסט חופשי להקרנה"}</h3>
+        <label className="field">
+          כותרת לטקסט (לא חובה)
+          <input
+            maxLength="120"
+            value={textTitle}
+            onChange={(e) => setTextTitle(e.target.value)}
+          />
+        </label>
+        <label className="field">
+          הטקסט שיוצג לכיתה
+          <textarea
+            rows="5"
+            required
+            maxLength="6000"
+            value={textBody}
+            onChange={(e) => setTextBody(e.target.value)}
+            placeholder="כתבו הנחיה, שאלה, רעיון או כל טקסט שתרצו להציג…"
+          />
+        </label>
+        <div className="free-text-actions">
+          <button className="primary" type="submit" disabled={!textBody.trim()}>
+            הקרנת הטקסט
+          </button>
+          <button
+            className="secondary"
+            type="button"
+            disabled={!textBody.trim()}
+            onClick={() => saveText(false)}
+          >
+            שמירת טקסט לספרייה
+          </button>
+          {editingText && (
+            <button className="text-button" type="button" onClick={clearText}>
+              ביטול עריכת טקסט
+            </button>
+          )}
+        </div>
+        <p className="muted">
+          הטקסט יוקרן רק בלחיצה מפורשת. שמירה לספרייה אינה משנה את מה שהכיתה
+          רואה.
+        </p>
+      </form>
       <label className="upload-zone">
         <Upload size={25} />
         <strong>{busy ? "מעלים…" : "העלאת קובץ"}</strong>
@@ -282,6 +367,19 @@ export function MediaPicker({ library, onAdd, onShow, onVideo }) {
               <button className="primary" onClick={() => onShow(m)}>
                 הצג לכיתה
               </button>
+              {m.kind === "text" && (
+                <button
+                  className="secondary"
+                  aria-label={`עריכת הטקסט ${m.name}`}
+                  onClick={() => {
+                    setEditingText(m.id);
+                    setTextTitle(m.title || "");
+                    setTextBody(m.text || "");
+                  }}
+                >
+                  עריכת טקסט
+                </button>
+              )}
               {m.url && (
                 <>
                   <button className="secondary" onClick={() => onVideo(m)}>

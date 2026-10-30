@@ -229,6 +229,12 @@ function publish(s, key = PUBLIC) {
   };
   localStorage.setItem(key, JSON.stringify(data));
 }
+function rememberMedia(s, media) {
+  const list = s.library || [];
+  s.library = list.some((item) => item.id === media.id)
+    ? list.map((item) => (item.id === media.id ? media : item))
+    : [...list, media];
+}
 function IconButton({ icon: Icon, label, ...props }) {
   return (
     <button className="icon-btn" aria-label={label} title={label} {...props}>
@@ -608,6 +614,8 @@ function App({ classroom, onLogout }) {
   }
   function project(type, extra = {}) {
     update((s) => {
+      if (type === "media" && extra.media?.kind === "text")
+        rememberMedia(s, extra.media);
       s.projection = { type, ...extra };
       if (type === "task") {
         s.projection.instruction = s.stages[s.stage].instruction;
@@ -1864,8 +1872,8 @@ function App({ classroom, onLogout }) {
               library={state.library || []}
               onAdd={(media) =>
                 update((s) => {
-                  s.library = [...(s.library || []), media];
-                }, "התוכן נוסף לספרייה, עדיין לא הוקרן")
+                  rememberMedia(s, media);
+                }, "התוכן נשמר בספרייה. ההקרנה לא השתנתה.")
               }
               onShow={(media) => {
                 project("media", { media });
