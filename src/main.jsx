@@ -44,6 +44,13 @@ import {
 } from "lucide-react";
 import "./style.css";
 import {
+  HatGuide,
+  HatDisplay,
+  GroupHatControls,
+  StudentHatSelect,
+  syncProjectedHats,
+} from "./thinkingHats";
+import {
   RoleGuide,
   RoleControls,
   ProjectedMembers,
@@ -160,6 +167,7 @@ function initial() {
     projection: { type: "slides" },
     groups: [],
     groupRoles: {},
+    studentHats: {},
     library: [],
     video: null,
     classMode: null,
@@ -422,6 +430,7 @@ function ProjectedContent({ data }) {
               <h3>
                 {g.emoji} {g.name}
               </h3>
+              <HatDisplay config={g.thinkingHat} />
               <ProjectedMembers members={g.members} />
             </div>
           ))}
@@ -609,6 +618,7 @@ function App({ classroom, onLogout }) {
           s.groups,
           s.students,
           s.groupRoles,
+          s.studentHats,
         );
       }
     }, "התוכן עודכן במסך ההקרנה");
@@ -685,6 +695,7 @@ function App({ classroom, onLogout }) {
   }
   function generateGroups() {
     update((s) => {
+      s.studentHats = {};
       const ids = s.students.filter((p) => p.present).map((p) => p.id);
       for (let i = ids.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -793,7 +804,12 @@ function App({ classroom, onLogout }) {
     const unpublished =
       state.projection.type === "groups" &&
       JSON.stringify(
-        snapshotGroups(state.groups, state.students, state.groupRoles),
+        snapshotGroups(
+          state.groups,
+          state.students,
+          state.groupRoles,
+          state.studentHats,
+        ),
       ) !== JSON.stringify(state.projection.groups);
     return (
       <>
@@ -824,6 +840,12 @@ function App({ classroom, onLogout }) {
           </div>
         )}
         <RoleGuide />
+        <HatGuide />
+        <p className="muted">
+          בחרו כובע משותף לכל קבוצה, או כובע אישי ליד תלמיד. כשהקבוצות מוקרנות,
+          בחירה ומעבר בין כובעים מתעדכנים מיד בהקרנה בלי לפרסם שינויי תפקידים או
+          הרכב שטרם אושרו.
+        </p>
         <div className="group-controls">
           <label>
             מספר קבוצות{" "}
@@ -924,6 +946,21 @@ function App({ classroom, onLogout }) {
                     {g.emoji} {g.name}
                     <small>{g.ids.length}</small>
                   </h3>
+                  <GroupHatControls
+                    group={g}
+                    onChange={(fn, shared = false) =>
+                      update((s) => {
+                        const group = s.groups.find((x) => x.id === g.id);
+                        if (!group) return;
+                        fn(group);
+                        if (shared) {
+                          s.studentHats ||= {};
+                          group.ids.forEach((id) => delete s.studentHats[id]);
+                        }
+                        syncProjectedHats(s);
+                      }, "כובע החשיבה עודכן")
+                    }
+                  />
                   {g.ids.map((id) => {
                     const p = state.students.find((p) => p.id === id);
                     return (
@@ -944,6 +981,18 @@ function App({ classroom, onLogout }) {
                                     s.groupRoles[p.id] = assignment;
                                   else delete s.groupRoles[p.id];
                                 }, "התפקיד עודכן בטיוטה. להצגה בכיתה בחרו „הצג קבוצות לכיתה”.")
+                              }
+                            />
+                            <StudentHatSelect
+                              student={p}
+                              hatId={state.studentHats?.[p.id]}
+                              onChange={(hatId) =>
+                                update((s) => {
+                                  s.studentHats ||= {};
+                                  if (hatId) s.studentHats[p.id] = hatId;
+                                  else delete s.studentHats[p.id];
+                                  syncProjectedHats(s);
+                                }, "כובע החשיבה האישי עודכן")
                               }
                             />
                             <select
@@ -2348,6 +2397,7 @@ function App({ classroom, onLogout }) {
                     s.summary = "";
                     s.groups = [];
                     s.groupRoles = {};
+                    s.studentHats = {};
                     s.video = null;
                     s.classMode = null;
                     s.students.forEach((p) => {

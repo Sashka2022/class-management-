@@ -1,4 +1,5 @@
 import React from "react";
+import { hatFor, PersonalHatBadge } from "./thinkingHats";
 export const groupRoles = [
   {
     id: "leader",
@@ -47,7 +48,12 @@ export function roleFor(assignment) {
       }
     : null;
 }
-export function snapshotGroups(groups, students, assignments) {
+export function snapshotGroups(
+  groups,
+  students,
+  assignments,
+  studentHats = {},
+) {
   return groups.map((group) => ({
     ...group,
     members: group.ids
@@ -58,6 +64,8 @@ export function snapshotGroups(groups, students, assignments) {
         name: p.name,
         emoji: p.emoji,
         role: roleFor(assignments?.[p.id]),
+        thinkingHat: hatFor(studentHats[p.id] || group.thinkingHat?.hatId),
+        personalHat: !!hatFor(studentHats[p.id]),
       })),
   }));
 }
@@ -143,6 +151,7 @@ export function ProjectedMembers({ members }) {
               <small>תפקיד: טרם נבחר</small>
             </span>
           )}
+          {p.personalHat && <PersonalHatBadge hat={p.thinkingHat} />}
         </li>
       ))}
     </ul>
