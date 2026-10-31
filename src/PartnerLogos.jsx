@@ -7,12 +7,13 @@ export function PartnerLogos() {
       <div className="partner-logo">
         <svg
           className="partner-logo-art"
-          viewBox="80 178 1002 384"
+          viewBox="80 178 1002 346"
+          preserveAspectRatio="xMidYMax meet"
           role="img"
           aria-label="חותם — אחריות לחינוך בישראל"
           focusable="false"
         >
-          {/* Frame the visible Hotam artwork, excluding the strip's empty margins. */}
+          {/* Align the subtitle baseline at y=524; the star extends below it. */}
           <image href={partnerLogos} width="2170" height="725" />
         </svg>
       </div>

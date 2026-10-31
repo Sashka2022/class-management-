@@ -2667,21 +2667,21 @@ select {
 }
 .partner-logos {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 180px));
+  grid-template-columns: repeat(2, minmax(0, 190px));
   direction: ltr;
   justify-content: center;
-  align-items: center;
+  align-items: end;
   width: 100%;
   padding: 24px 20px;
-  gap: clamp(16px, 4vw, 28px);
+  gap: clamp(22px, 5vw, 36px);
 }
 .partner-logo {
-  overflow: hidden;
+  overflow: visible;
   width: 100%;
-  aspect-ratio: 1002 / 384;
+  aspect-ratio: 1002 / 346;
   min-width: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
 }
 .partner-logo img,
@@ -2690,6 +2690,10 @@ select {
   width: 100%;
   height: 100%;
   object-fit: contain;
+  object-position: center bottom;
+}
+.partner-logo-art {
+  overflow: visible;
 }
 .login-form-area > .partner-logos {
   margin-top: 24px;
