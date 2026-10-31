@@ -57,6 +57,7 @@ import {
   RoleControls,
   ProjectedMembers,
   snapshotGroups,
+  assignGroupRoles,
 } from "./groupRoles";
 import { ClassModeBadge, ModePicker, QuoteBook, QuoteSlide } from "./teaching";
 import { usePairing, PairPanel, JoinDevice } from "./pairing";
@@ -172,6 +173,7 @@ function initial() {
     projection: { type: "slides" },
     groups: [],
     groupRoles: {},
+    autoAssignRoles: false,
     studentHats: {},
     library: [
       { id: "demo-slides", kind: "demo-slides", name: "מצגת כיתת דמה" },
@@ -820,6 +822,8 @@ function App({ classroom, onLogout }) {
         emoji: ["🌱", "🔍", "🌳", "🍃", "🌸", "🌰", "🌿", "🍎"][i],
         ids: ids.filter((_, n) => n % count === i),
       }));
+      if (s.autoAssignRoles)
+        s.groupRoles = assignGroupRoles(s.groups, s.groupRoles);
     }, "החלוקה מוכנה לבדיקה — עדיין לא הוקרנה");
   }
   const active = state.stages[state.stage],
@@ -949,10 +953,28 @@ function App({ classroom, onLogout }) {
           בחירה ומעבר בין כובעים מתעדכנים מיד בהקרנה בלי לפרסם שינויי תפקידים או
           הרכב שטרם אושרו.
         </p>
+        <label className="auto-role-option">
+          <input
+            type="checkbox"
+            checked={!!state.autoAssignRoles}
+            onChange={(e) =>
+              update((s) => {
+                s.autoAssignRoles = e.target.checked;
+              })
+            }
+          />
+          חלוקת תפקידים אוטומטית
+        </label>
+        <p className="muted">
+          בחלוקה חדשה יוקצה לכל תלמיד תפקיד באופן אקראי ומאוזן בתוך הקבוצה,
+          במקום התפקיד הקודם. בקבוצה גדולה כמה תלמידים יקבלו אותו תפקיד.
+          אפשר לשנות ידנית לפני ההקרנה.
+        </p>
         <div className="group-controls">
           <label>
             מספר קבוצות{" "}
             <select
+              aria-label="מספר קבוצות"
               value={groupCount}
               onChange={(e) => setGroupCount(+e.target.value)}
             >

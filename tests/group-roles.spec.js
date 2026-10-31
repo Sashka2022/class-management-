@@ -157,3 +157,73 @@ test("projected roles are snapshots and only change on explicit publication; a n
     ),
   ).toEqual({});
 });
+
+for (const count of [2, 8]) {
+  test(`optional automatic roles are balanced with ${count} groups and stay editable drafts`, async ({
+    page,
+  }) => {
+    const automatic = page.getByRole("checkbox", {
+      name: "חלוקת תפקידים אוטומטית",
+      exact: true,
+    });
+    await expect(automatic).not.toBeChecked();
+    await automatic.check();
+    // Enabling the option does not itself assign roles or create groups.
+    expect(
+      await page.evaluate(
+        () => JSON.parse(localStorage.getItem("beyachad-demo-v1")).groupRoles,
+      ),
+    ).toEqual({});
+    await page
+      .getByLabel("מספר קבוצות", { exact: true })
+      .selectOption(String(count));
+    await page.getByRole("button", { name: "חלוקה חדשה", exact: true }).click();
+    const read = () =>
+      page.evaluate(() => JSON.parse(localStorage.getItem("beyachad-demo-v1")));
+    const draft = await read();
+    expect(draft.groups).toHaveLength(count);
+    const ids = draft.groups.flatMap((g) => g.ids);
+    expect(ids.sort()).toEqual(
+      draft.students
+        .filter((p) => p.present)
+        .map((p) => p.id)
+        .sort(),
+    );
+    expect(Object.keys(draft.groupRoles).sort()).toEqual(ids.sort());
+    for (const group of draft.groups) {
+      const counts = ["leader", "recorder", "timekeeper", "presenter"].map(
+        (roleId) =>
+          group.ids.filter((id) => draft.groupRoles[id].roleId === roleId)
+            .length,
+      );
+      expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(1);
+    }
+    expect(draft.projection.type).not.toBe("groups");
+    await page
+      .getByRole("button", { name: "הצג קבוצות לכיתה", exact: true })
+      .click();
+    const published = (await read()).projection;
+    await page.getByRole("button", { name: "חלוקה חדשה", exact: true }).click();
+    expect((await read()).projection).toEqual(published);
+    const student = draft.students.find((p) => p.present);
+    const role = page.getByLabel(`תפקיד של ${student.name}`, { exact: true });
+    await role.selectOption("presenter");
+    await expect(role).toHaveValue("presenter");
+    await automatic.uncheck();
+    const manual = (await read()).groupRoles;
+    await page.getByRole("button", { name: "חלוקה חדשה", exact: true }).click();
+    expect((await read()).groupRoles).toEqual(manual);
+    await automatic.check();
+    await page.reload();
+    await page
+      .getByRole("button", { name: "הקבוצות שלנו", exact: true })
+      .click();
+    await expect(automatic).toBeChecked();
+    await page.setViewportSize({ width: 390, height: 844 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  });
+}

@@ -1154,6 +1154,18 @@ h3 {
   color: #909a83;
   line-height: 1.9;
 }
+.auto-role-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.auto-role-option input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--primary, #3c7564);
+}
 .group-controls {
   display: flex;
   align-items: center;

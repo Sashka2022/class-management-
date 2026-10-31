@@ -35,6 +35,21 @@ export const groupRoles = [
     description: "מציגים לכיתה את התוצרים והרעיונות ומסבירים מה הקבוצה גילתה.",
   },
 ];
+export function assignGroupRoles(groups, assignments = {}) {
+  const next = { ...assignments };
+  for (const group of groups) {
+    const roles = [...groupRoles];
+    for (let i = roles.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [roles[i], roles[j]] = [roles[j], roles[i]];
+    }
+    group.ids.forEach((id, index) => {
+      const role = roles[index % roles.length];
+      next[id] = { roleId: role.id, icon: role.icon };
+    });
+  }
+  return next;
+}
 export function roleFor(assignment) {
   const role = groupRoles.find((r) => r.id === assignment?.roleId);
   return role
