@@ -4,6 +4,7 @@ import {
   createHash,
   timingSafeEqual,
 } from "node:crypto";
+import { teacherSession, changeControl, digest } from "./lessonSessions.js";
 const TTL = 4 * 60 * 60;
 const hash = (s) => createHash("sha256").update(String(s)).digest("hex");
 const secret = () => randomBytes(32).toString("hex");
@@ -173,7 +174,7 @@ function validState(s) {
   return (
     s &&
     Array.isArray(s.students) &&
-    s.students.length <= 200 &&
+    s.students.length <= 1000 &&
     s.students.every(
       (p) =>
         typeof p.id === "string" &&
@@ -202,7 +203,7 @@ function validState(s) {
     s.timer &&
     Number.isFinite(s.timer.remaining) &&
     (s.timer.end === null || Number.isFinite(s.timer.end)) &&
-    JSON.stringify(s).length < 220000
+    JSON.stringify(s).length < 1500000
   );
 }
 function authenticate(doc, token) {
@@ -244,7 +245,7 @@ export function createPairHandler(storeProvider) {
       );
       if (
         !(await store.limit(
-          `beyachad:limit:${action}:${ip}`,
+          `beyachad:limit:${action}:${ip}:${/^[a-f0-9]{64}$/.test(b.id || "") ? b.id : "global"}`,
           ["create", "join"].includes(action) ? 10 : 300,
         ))
       )
@@ -253,11 +254,34 @@ export function createPairHandler(storeProvider) {
         if (b.password !== "1111") fail(401, "סיסמה שגויה");
         if (!validState(b.state) || !b.classroom?.id || !b.classroom?.name)
           fail(400, "נתוני כיתה לא תקינים");
-        const id = secret(),
-          token = secret(),
+        let owner = null;
+        if (b.authToken) {
+          owner = await teacherSession(store, b.authToken);
+          if (owner.classId !== b.classroom.id)
+            fail(403, "אין הרשאה לשיעור הזה.");
+          await changeControl(store, owner, "renew");
+          b.classroom = owner.classroom;
+        } else if (b.classroom.id !== "g2")
+          fail(401, "יש להתחבר כמורה לפני חיבור מכשירים.");
+        else b.classroom = { id: "g2", name: "כיתת דמה", demo: true };
+        const id = owner?.leaseId
+            ? digest(`lesson:${owner.leaseId}`)
+            : secret(),
+          token = owner?.leaseId ? digest(`host:${b.authToken}`) : secret(),
           code = String(randomInt(10000000, 100000000));
         const key = `beyachad:session:${id}`,
           codeKey = `beyachad:code:${code}`;
+        const existing = await store.get(key);
+        if (existing) {
+          const current = JSON.parse(existing);
+          return res.status(200).json({
+            id,
+            token,
+            code: current.code,
+            codeExpires: current.codeExpires,
+            ...snapshot(current),
+          });
+        }
         if (!(await store.create(codeKey, id, 600)))
           fail(409, "נסו ליצור קוד חדש");
         const doc = {
@@ -265,12 +289,24 @@ export function createPairHandler(storeProvider) {
           device: null,
           state: b.state,
           classroom: b.classroom,
+          leaseId: owner?.leaseId,
           version: 0,
           expires: Date.now() + TTL * 1000,
           code,
+          codeExpires: Date.now() + 600000,
           ops: [],
         };
-        await store.create(key, JSON.stringify(doc), TTL);
+        if (!(await store.create(key, JSON.stringify(doc), TTL))) {
+          await store.del(codeKey);
+          const current = JSON.parse(await store.get(key));
+          return res.status(200).json({
+            id,
+            token,
+            code: current.code,
+            codeExpires: current.codeExpires,
+            ...snapshot(current),
+          });
+        }
         return res.status(200).json({
           id,
           token,
@@ -287,6 +323,16 @@ export function createPairHandler(storeProvider) {
           raw = await store.get(key);
         if (!raw) fail(410, "החיבור הסתיים");
         const doc = JSON.parse(raw);
+        if (!doc.leaseId && doc.classroom.id !== "g2")
+          fail(401, "יש להתחבר מחדש להפעלת הגנת הכיתות.");
+        await changeControl(
+          store,
+          {
+            leaseId: doc.leaseId,
+            classIds: doc.classroom.classIds || [doc.classroom.id],
+          },
+          "renew",
+        );
         if (doc.device || doc.expires < Date.now())
           fail(410, "הקוד כבר נוצל או פג תוקף");
         const token = secret();
@@ -309,7 +355,17 @@ export function createPairHandler(storeProvider) {
       if (!raw) fail(410, "החיבור הסתיים. צרו קוד חדש במחשב.");
       const doc = JSON.parse(raw);
       if (!authenticate(doc, b.token)) fail(401, "אין הרשאה לחיבור");
+      if (!doc.leaseId && doc.classroom.id !== "g2")
+        fail(401, "יש להתחבר מחדש להפעלת הגנת הכיתות.");
       if (doc.expires < Date.now()) fail(410, "תוקף החיבור פג");
+      await changeControl(
+        store,
+        {
+          leaseId: doc.leaseId,
+          classIds: doc.classroom.classIds || [doc.classroom.id],
+        },
+        "renew",
+      );
       if (action === "read") return res.status(200).json(snapshot(doc));
       if (action === "close") {
         if (hash(b.token) !== doc.host) fail(403, "רק המחשב המארח יכול לנתק");

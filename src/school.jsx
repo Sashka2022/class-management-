@@ -82,7 +82,13 @@ export async function loadCatalog() {
   cacheCatalog(result.classes);
   return result.classes;
 }
-export function useCloudArchive({ classroom, state, update, onRoster }) {
+export function useCloudArchive({
+  classroom,
+  state,
+  update,
+  onRoster,
+  canSave = true,
+}) {
   const credentials = cloudCredentials(classroom.id),
     enabled = !!credentials && !window.__BEYACHAD_STANDALONE__;
   const [rosterError, setRosterError] = useState(""),
@@ -142,6 +148,7 @@ export function useCloudArchive({ classroom, state, update, onRoster }) {
   useEffect(() => {
     if (
       !enabled ||
+      classroom.combined ||
       credentials?.pairId ||
       !rosterLoaded.current ||
       !ready ||
@@ -182,7 +189,8 @@ export function useCloudArchive({ classroom, state, update, onRoster }) {
     run();
   }, [enabled, ready, roster, revision]);
   useEffect(() => {
-    if (!enabled || !ready || busy.current || !pending.length) return;
+    if (!enabled || !ready || !canSave || busy.current || !pending.length)
+      return;
     busy.current = true;
     setWorking(true);
     let saved = false;
@@ -216,7 +224,7 @@ export function useCloudArchive({ classroom, state, update, onRoster }) {
       }
     };
     run();
-  }, [enabled, ready, signature, revision]);
+  }, [enabled, ready, signature, revision, canSave]);
   return {
     enabled,
     ready,
@@ -330,7 +338,7 @@ export function ReportPanel({ classroom, localState, admin = false }) {
         <table className="report-table">
           <thead>
             <tr>
-              {admin && <th>כיתה</th>}
+              {(admin || classroom?.combined) && <th>כיתה</th>}
               <th>תלמיד/ה</th>
               <th>נוכחות</th>
               <th>לבבות</th>
@@ -340,7 +348,7 @@ export function ReportPanel({ classroom, localState, admin = false }) {
           <tbody>
             {students.map((p) => (
               <tr key={`${p.classId || classId}:${p.id}`}>
-                {admin && (
+                {(admin || classroom?.combined) && (
                   <td>
                     {p.className ||
                       records.find((r) => r.classId === p.classId)?.className ||

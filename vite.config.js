@@ -20,7 +20,7 @@ export default defineConfig({
             chunks = [];
           for await (const chunk of req) {
             size += chunk.length;
-            if (size > 256000) {
+            if (size > 1800000) {
               res.statusCode = 413;
               res.end("Request too large");
               return;

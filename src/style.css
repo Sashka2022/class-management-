@@ -5389,3 +5389,30 @@ select {
     height: 34px;
   }
 }
+.combined-class-picker {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin: 16px 0;
+  padding: 12px 16px;
+  max-height: 300px;
+  overflow: auto;
+}
+.combined-class-picker legend {
+  color: var(--brand-blue-dark);
+  font-weight: 700;
+  font-size: 14px;
+}
+.combined-lesson-banner,
+.control-warning {
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin: 12px 0;
+  font-size: 13px;
+  line-height: 1.8;
+  background: var(--brand-teal-soft);
+  color: #245e61;
+}
+.control-warning {
+  background: #fff2dc;
+  color: #754b1c;
+}

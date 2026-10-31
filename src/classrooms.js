@@ -18,7 +18,27 @@ function normalizedName(name) {
     .replace(/[\s׳״'"]/g, "");
 }
 export function classLabel(c) {
+  if (c.combined) return `שיעור משולב · ${c.name}`;
   return c.demo || c.name === "כיתת דמה" ? c.name : `כיתה ${c.name}`;
+}
+export function rememberCombinedClassroom(classroom) {
+  if (!classroom?.combined) return;
+  const saved = JSON.parse(
+    localStorage.getItem("kaluach-combined-classes") || "{}",
+  );
+  saved[classroom.id] = classroom;
+  localStorage.setItem("kaluach-combined-classes", JSON.stringify(saved));
+}
+export function resolveClassroom(id) {
+  const regular = classrooms().find((c) => c.id === id);
+  if (regular) return regular;
+  try {
+    return JSON.parse(localStorage.getItem("kaluach-combined-classes") || "{}")[
+      id
+    ];
+  } catch {
+    return null;
+  }
 }
 export function classrooms() {
   let saved = [];
@@ -99,6 +119,13 @@ export function archiveLesson(s, completed) {
       late: !!p.late,
       hearts: p.hearts,
       warnings: p.warningCount ?? p.warning ?? 0,
+      ...(p.sourceClassId
+        ? {
+            sourceClassId: p.sourceClassId,
+            sourceStudentId: p.sourceStudentId,
+            sourceName: p.sourceName,
+          }
+        : {}),
     })),
     endedAt,
     minutes: Math.max(0, Math.round((endedAt - s.started) / 60000)),

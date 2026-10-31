@@ -1,5 +1,5 @@
 import { schoolYear } from "../shared/schoolPolicy";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import {
   Sprout,
@@ -44,7 +44,13 @@ import {
   Presentation,
 } from "lucide-react";
 import "./style.css";
-import { useCloudArchive, ArchiveStatus, ReportPanel } from "./school";
+import {
+  useCloudArchive,
+  ArchiveStatus,
+  ReportPanel,
+  session as schoolSession,
+  schoolRequest,
+} from "./school";
 import {
   HatGuide,
   HatDisplay,
@@ -80,6 +86,7 @@ import {
   storedClass,
   currentHearts,
   archiveLesson,
+  resolveClassroom,
 } from "./classrooms";
 
 const KEY = LEGACY_KEY,
@@ -686,11 +693,16 @@ function App({ classroom, onLogout }) {
     setState(next);
   }
   const pair = usePairing(classroom, state, applyPaired);
+  const signedIn = schoolSession();
+  const needsControl = !!signedIn.leaseId && !classroom.demo;
+  const [controlError, setControlError] = useState("");
+  const connecting = useRef(false);
   const remote = new URLSearchParams(location.search).get("view") === "remote";
   const cloud = useCloudArchive({
     classroom,
     state,
     update,
+    canSave: !needsControl || !!pair.connection,
     onRoster: (rows) => {
       const next = structuredClone(readCurrent());
       const old = new Map(next.students.map((p) => [p.id, p]));
@@ -707,8 +719,43 @@ function App({ classroom, onLogout }) {
     },
   });
   useEffect(() => {
-    publish(state, PUBLIC);
-    localStorage.setItem(KEY, JSON.stringify(state));
+    if (!needsControl) return;
+    let stopped = false;
+    const renew = () =>
+      schoolRequest({ action: "heartbeat" }, { token: signedIn.authToken })
+        .then(() => {
+          if (!stopped) setControlError("");
+        })
+        .catch((e) => {
+          if (!stopped) setControlError(e.message);
+        });
+    renew();
+    const timer = setInterval(renew, 30000);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+    };
+  }, [signedIn.authToken, needsControl]);
+  useEffect(() => {
+    if (!needsControl || !cloud.ready || pair.connection) return;
+    const connect = async () => {
+      if (connecting.current) return;
+      connecting.current = true;
+      try {
+        await pair.create();
+      } finally {
+        connecting.current = false;
+      }
+    };
+    connect();
+    const timer = setInterval(connect, 10000);
+    return () => clearInterval(timer);
+  }, [needsControl, cloud.ready, pair.connection?.id]);
+  useEffect(() => {
+    if (!needsControl) {
+      publish(state, PUBLIC);
+      localStorage.setItem(KEY, JSON.stringify(state));
+    }
     const h = (e) => {
       if (e.key === KEY) setState(readCurrent());
     };
@@ -725,6 +772,12 @@ function App({ classroom, onLogout }) {
     return () => clearTimeout(t);
   }, [toast]);
   function update(fn, message, undo = false) {
+    if (needsControl && !pair.connection) {
+      setToast({
+        message: "מחברים את השיעור המאובטח לכיתות. המתינו רגע ונסו שוב.",
+      });
+      return Promise.resolve(null);
+    }
     if (pair.connection) {
       return pair
         .mutate(fn)
@@ -1455,13 +1508,30 @@ function App({ classroom, onLogout }) {
             />
           </div>
         </header>
-        <main className="workspace" aria-busy={!cloud.ready}>
-          {!cloud.ready && (
+        <main
+          className="workspace"
+          aria-busy={!cloud.ready || (needsControl && !pair.connection)}
+        >
+          {(!cloud.ready ||
+            (needsControl && !pair.connection && !pair.error)) && (
             <div className="cloud-loading" role="status">
-              טוענים את רשימת הכיתה מהענן…
+              {!cloud.ready
+                ? "טוענים את רשימת הכיתה מהענן…"
+                : "מחברים את הכיתות לשיעור המשותף…"}
             </div>
           )}
           <ArchiveStatus cloud={cloud} demo={state.demo} />
+          {(controlError || (needsControl && pair.error)) && (
+            <p className="control-warning" role="alert">
+              {controlError || pair.error}
+            </p>
+          )}
+          {classroom.combined && (
+            <p className="combined-lesson-banner">
+              שיעור משולב: {classroom.name}. ליד כל תלמיד מופיעה כיתת המקור שלו.
+              עריכת רשימות התלמידים נעשית בכיתות המקור.
+            </p>
+          )}
           {!remote && (
             <>
               <div className="page-heading">
@@ -1668,6 +1738,7 @@ function App({ classroom, onLogout }) {
                 </h2>
                 <button
                   className="secondary"
+                  disabled={!!classroom.combined}
                   onClick={() => {
                     setRosterText("");
                     setModal({ type: "add" });
@@ -1678,6 +1749,7 @@ function App({ classroom, onLogout }) {
               </div>
               <button
                 className="secondary bulk-entry"
+                disabled={!!classroom.combined}
                 onClick={() => {
                   setRosterText("");
                   setModal({ type: "add" });
@@ -2279,6 +2351,7 @@ function App({ classroom, onLogout }) {
                     שם לתצוגה
                     <input
                       value={p.name}
+                      disabled={!!classroom.combined}
                       onChange={(e) =>
                         update(
                           (s) =>
@@ -2292,6 +2365,7 @@ function App({ classroom, onLogout }) {
                     אייקון קבוע
                     <select
                       value={p.emoji}
+                      disabled={!!classroom.combined}
                       onChange={(e) =>
                         update(
                           (s) =>
@@ -2388,6 +2462,7 @@ function App({ classroom, onLogout }) {
                   </div>
                   <button
                     className="danger text-button"
+                    disabled={!!classroom.combined}
                     onClick={() =>
                       setModal({ type: "student", id: p.id, remove: true })
                     }
@@ -2750,7 +2825,15 @@ function Entry() {
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(next));
     setSession(next);
   }
-  function logout() {
+  async function logout() {
+    if (session?.authToken && session?.leaseId) {
+      try {
+        await schoolRequest(
+          { action: "release" },
+          { token: session.authToken },
+        );
+      } catch {}
+    }
     sessionStorage.removeItem(SESSION_KEY);
     setSession(null);
   }
@@ -2766,7 +2849,7 @@ function Entry() {
     );
   if (view === "projector") {
     const id = requestedClass || "g2";
-    return classrooms().some((c) => c.id === id) ? (
+    return resolveClassroom(id) ? (
       <Projector classId={id} />
     ) : (
       <main className="activity">
@@ -2775,10 +2858,11 @@ function Entry() {
       </main>
     );
   }
-  const classroom = classrooms().find((c) => c.id === session?.classId);
+  const classroom = resolveClassroom(session?.classId) || session?.classroom;
   const validTeacher =
     session?.role === "teacher" &&
     classroom &&
+    (!session.authToken || classroom.demo || !!session.leaseId) &&
     (!requestedClass || requestedClass === classroom.id);
   if (session?.role === "admin" && view !== "remote")
     return <Admin onLogout={logout} />;

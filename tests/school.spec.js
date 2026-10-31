@@ -167,7 +167,7 @@ test("central class catalog and versioned rosters are available across sessions"
   await expect(
     page.getByRole("option", { name: "כיתה ז1", exact: true }),
   ).toHaveCount(1);
-  const second = await login(request);
+  const second = teacher; // A second device of the same controlling session.
   const students = [
     { id: "one", name: "תלמידה ראשונה", emoji: "🌱", hearts: 999 },
   ];
@@ -237,7 +237,7 @@ test("a completed lesson is visible in a separate teacher browser and can be del
   browser,
   request,
 }) => {
-  const token = await login(request);
+  const token = await login(request, "admin");
   await call(
     request,
     {
@@ -275,6 +275,10 @@ test("a completed lesson is visible in a separate teacher browser and can be del
       ),
     )
     .toBe(true);
+  await page.getByRole("button", { name: "יציאה", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "ברוכים הבאים לקלי קלוח" }),
+  ).toBeVisible();
   const other = await browser.newContext(),
     remote = await other.newPage();
   await remote.goto("/");

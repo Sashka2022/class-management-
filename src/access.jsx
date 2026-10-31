@@ -24,15 +24,10 @@ import {
   classLabel,
   storedClass,
   currentHearts,
+  rememberCombinedClassroom,
 } from "./classrooms";
 
-import {
-  schoolRequest,
-  loadCatalog,
-  cacheCatalog,
-  session,
-  ReportPanel,
-} from "./school";
+import { schoolRequest, cacheCatalog, session, ReportPanel } from "./school";
 
 export function Login({ onLogin, requestedClass, admin = false, onPair }) {
   const [role, setRole] = useState(admin ? "admin" : "teacher"),
@@ -41,16 +36,41 @@ export function Login({ onLogin, requestedClass, admin = false, onPair }) {
     [error, setError] = useState(""),
     [show, setShow] = useState(false),
     [catalog, setCatalog] = useState(classrooms);
+  const [combined, setCombined] = useState(false),
+    [classIds, setClassIds] = useState([]),
+    [occupied, setOccupied] = useState([]),
+    [busy, setBusy] = useState(false);
   useEffect(() => {
     if (window.__BEYACHAD_STANDALONE__) return;
-    loadCatalog()
-      .then(() => setCatalog(classrooms()))
-      .catch(() => {});
+    let cancelled = false;
+    const refresh = () =>
+      schoolRequest({ action: "classes" }, null)
+        .then((result) => {
+          if (cancelled) return;
+          cacheCatalog(result.classes);
+          setCatalog(result.classes);
+          setOccupied(result.occupied || []);
+        })
+        .catch(() => {});
+    refresh();
+    const timer = setInterval(refresh, 15000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
   }, []);
   async function submit(e) {
     e.preventDefault();
     setError("");
+    if (combined && role === "teacher" && classIds.length < 2) {
+      setError("לשיעור משולב יש לבחור לפחות שתי כיתות.");
+      return;
+    }
     if (window.__BEYACHAD_STANDALONE__) {
+      if (combined) {
+        setError("שיעור משולב דורש כניסה לאתר המחובר לשרת.");
+        return;
+      }
       if (password !== "1111") {
         setError("הסיסמה אינה נכונה. נסו שוב.");
         return;
@@ -58,19 +78,36 @@ export function Login({ onLogin, requestedClass, admin = false, onPair }) {
       onLogin({ role, classId: role === "teacher" ? classId : null });
       return;
     }
+    setBusy(true);
     try {
       const result = await schoolRequest(
-        { action: "login", role, classId, password },
+        {
+          action: "login",
+          role,
+          classId,
+          password,
+          ...(role === "teacher" && combined
+            ? { combined: true, classIds }
+            : {}),
+        },
         null,
       );
       cacheCatalog(result.classes);
+      rememberCombinedClassroom(result.classroom);
+      if (result.role === "teacher")
+        sessionStorage.removeItem(`beyachad-pair-${result.classId}`);
       onLogin({
         role: result.role,
         classId: result.classId,
         authToken: result.authToken,
+        classroom: result.classroom,
+        classIds: result.classIds,
+        leaseId: result.leaseId,
       });
     } catch (e) {
       setError(e.message);
+    } finally {
+      setBusy(false);
     }
   }
   return (
@@ -125,25 +162,71 @@ export function Login({ onLogin, requestedClass, admin = false, onPair }) {
           </div>
           {role === "teacher" ? (
             <>
-              <label className="field">
-                הכיתה שלי
-                <select
-                  aria-label="הכיתה שלי"
-                  value={classId}
+              <label className="auto-role-option">
+                <input
+                  type="checkbox"
+                  checked={combined}
                   onChange={(e) => {
-                    setClassId(e.target.value);
+                    setCombined(e.target.checked);
                     setError("");
                   }}
-                >
-                  {catalog.map((c) => (
-                    <option value={c.id} key={c.id}>
-                      {classLabel(c)}
-                    </option>
-                  ))}
-                </select>
+                />
+                שיעור משולב לכמה כיתות
               </label>
+              {combined ? (
+                <fieldset className="combined-class-picker">
+                  <legend>הכיתות המשתתפות בשיעור</legend>
+                  <p className="muted">
+                    בחרו לפחות שתי כיתות. רשימות המקור נשמרות בנפרד.
+                  </p>
+                  {catalog
+                    .filter((c) => !c.demo)
+                    .map((c) => (
+                      <label className="auto-role-option" key={c.id}>
+                        <input
+                          type="checkbox"
+                          checked={classIds.includes(c.id)}
+                          disabled={
+                            occupied.includes(c.id) && !classIds.includes(c.id)
+                          }
+                          onChange={(e) =>
+                            setClassIds((ids) =>
+                              e.target.checked
+                                ? [...ids, c.id]
+                                : ids.filter((id) => id !== c.id),
+                            )
+                          }
+                        />
+                        {classLabel(c)}
+                        {occupied.includes(c.id) ? " · בשיעור פעיל" : ""}
+                      </label>
+                    ))}
+                </fieldset>
+              ) : (
+                <>
+                  <label className="field">
+                    הכיתה שלי
+                    <select
+                      aria-label="הכיתה שלי"
+                      value={classId}
+                      onChange={(e) => {
+                        setClassId(e.target.value);
+                        setError("");
+                      }}
+                    >
+                      {catalog.map((c) => (
+                        <option value={c.id} key={c.id}>
+                          {classLabel(c)}
+                          {occupied.includes(c.id) ? " · בשיעור פעיל" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </>
+              )}
               <p className="login-hint">
-                כל מורה יכול להיכנס לכיתה באמצעות הסיסמה המשותפת.
+                הכיתות משוריינות לשיעור עד היציאה. אפשר לצרף את הנייד של אותה
+                מורה באמצעות קוד חיבור.
               </p>
             </>
           ) : (
@@ -186,7 +269,11 @@ export function Login({ onLogin, requestedClass, admin = false, onPair }) {
               {error}
             </p>
           )}
-          <button type="submit" className="primary login-submit">
+          <button
+            type="submit"
+            className="primary login-submit"
+            disabled={busy}
+          >
             {role === "teacher" ? "נכנסים לכיתה" : "למרחב האדמין"}
             <ArrowLeft size={18} />
           </button>

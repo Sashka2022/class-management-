@@ -1,6 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import { QRCodeCanvas } from "qrcode.react";
-import { classrooms, classKey, SESSION_KEY } from "./classrooms";
+import {
+  classrooms,
+  classKey,
+  SESSION_KEY,
+  rememberCombinedClassroom,
+} from "./classrooms";
 const key = (id) => `beyachad-pair-${id}`;
 export async function pairRequest(body) {
   const r = await fetch("/api/pair", {
@@ -85,6 +90,8 @@ export function usePairing(classroom, state, apply) {
         password: "1111",
         state,
         classroom,
+        authToken: JSON.parse(sessionStorage.getItem(SESSION_KEY) || "{}")
+          .authToken,
       });
       version.current = -1;
       const c = {
@@ -255,8 +262,9 @@ export function JoinDevice({ onJoin, onBack }) {
           try {
             const result = await pairRequest({ action: "join", code });
             const c = result.classroom;
+            rememberCombinedClassroom(c);
             const list = classrooms();
-            if (!list.some((x) => x.id === c.id))
+            if (!c.combined && !list.some((x) => x.id === c.id))
               localStorage.setItem(
                 "beyachad-classrooms-v1",
                 JSON.stringify([...list, c]),
@@ -270,7 +278,12 @@ export function JoinDevice({ onJoin, onBack }) {
                 host: false,
               }),
             );
-            onJoin({ role: "teacher", classId: c.id });
+            onJoin({
+              role: "teacher",
+              classId: c.id,
+              classroom: c,
+              classIds: c.classIds || [c.id],
+            });
           } catch (e) {
             setError(e.message);
           } finally {

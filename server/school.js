@@ -1,6 +1,11 @@
 import { randomBytes, createHash, timingSafeEqual } from "node:crypto";
 import { DEFAULT_CLASSES } from "../src/classrooms.js";
 import { dayInIsrael, schoolYear } from "../shared/schoolPolicy.js";
+import {
+  activeLessons,
+  changeControl,
+  combinedStudentId,
+} from "./lessonSessions.js";
 const prefix = "{beyachad-school}:",
   registry = prefix + "classes",
   hash = (s) => createHash("sha256").update(String(s)).digest("hex");
@@ -50,14 +55,37 @@ async function auth(req, store) {
         .some((h) => timingSafeEqual(Buffer.from(h), candidate))
     )
       fail(401, "אין הרשאה לחיבור");
-    return { role: "teacher", classId: p.classroom.id };
+    if (!p.leaseId && p.classroom.id !== "g2")
+      fail(401, "יש להתחבר מחדש להפעלת הגנת הכיתות.");
+    return {
+      role: "teacher",
+      classId: p.classroom.id,
+      classIds: p.leaseId
+        ? p.classroom.classIds || [p.classroom.id]
+        : [p.classroom.id],
+      classroom: p.leaseId
+        ? p.classroom
+        : { id: "g2", name: "כיתת דמה", demo: true },
+      leaseId: p.leaseId,
+    };
   }
   const raw = await store.get(prefix + "auth:" + hash(token));
   if (!raw) fail(401, "תוקף הכניסה הסתיים. יש להתחבר מחדש.");
-  return JSON.parse(raw);
+  const session = JSON.parse(raw);
+  if (
+    session.role === "teacher" &&
+    session.classId !== "g2" &&
+    !session.leaseId
+  )
+    fail(401, "יש להתחבר מחדש להפעלת הגנת הכיתות.");
+  return session;
 }
 function scope(user, classId) {
-  if (user.role !== "admin" && user.classId !== classId)
+  if (
+    user.role !== "admin" &&
+    user.classId !== classId &&
+    !user.classIds?.includes(classId)
+  )
     fail(403, "אין הרשאה לכיתה הזאת");
 }
 function studentRecord(p) {
@@ -199,17 +227,52 @@ export function createSchoolHandler(provider) {
       )
         fail(429, "יותר מדי ניסיונות. נסו שוב בעוד דקה.");
       const classes = await catalog(store);
-      if (b.action === "classes") return res.status(200).json({ classes });
+      if (b.action === "classes")
+        return res
+          .status(200)
+          .json({ classes, occupied: Object.keys(await activeLessons(store)) });
       if (b.action === "login") {
         if (!["teacher", "admin"].includes(b.role) || b.password !== "1111")
           fail(401, "הסיסמה אינה נכונה. נסו שוב.");
-        if (b.role === "teacher" && !classes.some((c) => c.id === b.classId))
-          fail(404, "הכיתה לא נמצאה");
+        if (b.classIds !== undefined && !Array.isArray(b.classIds))
+          fail(400, "בחירת כיתות לא תקינה.");
+        const ids =
+          b.role === "teacher"
+            ? [...new Set(b.classIds || [b.classId])].sort()
+            : [];
+        if (
+          b.role === "teacher" &&
+          (!ids.length ||
+            ids.length > 10 ||
+            ids.some((id) => !classes.some((c) => c.id === id)))
+        )
+          fail(400, "יש לבחור כיתות תקינות.");
+        if (b.combined && ids.length < 2)
+          fail(400, "לשיעור משולב יש לבחור לפחות שתי כיתות.");
+        const selected = classes.filter((c) => ids.includes(c.id));
+        if (ids.length > 1 && selected.some((c) => c.demo))
+          fail(400, "כיתת הדמה אינה מצטרפת לשיעור משולב.");
+        const classroom =
+          ids.length > 1
+            ? {
+                id: `combined_${hash(ids.join(":")).slice(0, 24)}`,
+                name: selected.map((c) => c.name).join(" + "),
+                combined: true,
+                classIds: ids,
+                members: selected,
+              }
+            : selected[0];
         const token = randomBytes(32).toString("hex");
         const session = {
           role: b.role,
-          classId: b.role === "teacher" ? b.classId : null,
+          classId: classroom?.id || null,
+          classIds: ids,
+          classroom: classroom || null,
+          ...(b.role === "teacher" && !classroom.demo
+            ? { leaseId: hash(token) }
+            : {}),
         };
+        await changeControl(store, session, "acquire");
         await store.create(
           prefix + "auth:" + hash(token),
           JSON.stringify(session),
@@ -223,6 +286,14 @@ export function createSchoolHandler(provider) {
         });
       }
       const user = await auth(req, store);
+      if (b.action === "heartbeat" || b.action === "release") {
+        await changeControl(
+          store,
+          user,
+          b.action === "release" ? "release" : "renew",
+        );
+        return res.status(200).json({ ok: true });
+      }
       if (b.action === "addClass") {
         if (user.role !== "admin") fail(403, "הוספת כיתות זמינה לאדמין");
         const name = cleanName(b.name);
@@ -277,9 +348,51 @@ export function createSchoolHandler(provider) {
       )
         fail(400, "כיתה לא תקינה");
       if (b.classId) scope(user, b.classId);
-      const classroom = classes.find((c) => c.id === b.classId);
+      const classroom =
+        classes.find((c) => c.id === b.classId) ||
+        (user.classroom?.id === b.classId ? user.classroom : null);
       if (b.classId && !classroom) fail(404, "הכיתה לא נמצאה");
       if (b.action === "saveReport") {
+        if (classroom.combined) {
+          if (
+            !Array.isArray(b.report?.students) ||
+            b.report.students.length > 1000
+          )
+            fail(400, "סיכום משולב לא תקין.");
+          const reports = classroom.members.map((c) => {
+            const students = b.report.students.filter(
+              (p) => p.sourceClassId === c.id,
+            );
+            for (const p of students)
+              if (
+                !idValid(p.sourceStudentId) ||
+                p.id !== combinedStudentId(c.id, p.sourceStudentId)
+              )
+                fail(400, "שיוך תלמיד לכיתה אינו תקין.");
+            return reportFrom(
+              {
+                ...b.report,
+                students: students.map((p) => ({
+                  ...p,
+                  id: p.sourceStudentId,
+                  name: p.sourceName || p.name,
+                })),
+              },
+              c,
+            );
+          });
+          if (
+            reports.reduce((sum, r) => sum + r.students.length, 0) !==
+            b.report.students.length
+          )
+            fail(400, "תלמיד ללא כיתת מקור.");
+          for (const report of reports) await changeReport(store, report);
+          return res.status(200).json({
+            saved: true,
+            id: b.report.id,
+            expiresAt: reports[0].expiresAt,
+          });
+        }
         const report = reportFrom(b.report, classroom);
         await changeReport(store, report);
         return res
@@ -290,7 +403,9 @@ export function createSchoolHandler(provider) {
         const day = b.day || dayInIsrael();
         if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) fail(400, "תאריך לא תקין");
         const selected = b.classId
-          ? [classroom]
+          ? classroom.combined
+            ? classroom.members
+            : [classroom]
           : classes.filter((c) => !c.demo);
         if (user.role !== "admin" && !b.classId) fail(403, "יש לבחור כיתה");
         const ids = await Promise.all(
@@ -314,10 +429,37 @@ export function createSchoolHandler(provider) {
         return res.status(200).json({ deleted: true });
       }
       if (b.action === "roster") {
+        if (user.role === "teacher") await changeControl(store, user, "renew");
+        if (classroom.combined) {
+          const rows = await store.many(
+            classroom.members.map((c) => prefix + "roster:" + c.id),
+          );
+          const students = classroom.members.flatMap((c, i) =>
+            (rows[i] ? JSON.parse(rows[i]).students : []).map((p) => ({
+              ...p,
+              id: combinedStudentId(c.id, p.id),
+              name: `${p.name} · ${c.name}`,
+              sourceClassId: c.id,
+              sourceStudentId: p.id,
+              sourceName: p.name,
+            })),
+          );
+          if (students.length > 1000)
+            fail(400, "בשיעור משולב אפשר עד 1,000 תלמידים.");
+          return res
+            .status(200)
+            .json({ roster: { students, version: 0 }, readOnly: true });
+        }
         const raw = await store.get(prefix + "roster:" + b.classId);
         return res.status(200).json({ roster: raw ? JSON.parse(raw) : null });
       }
       if (b.action === "saveRoster") {
+        if (classroom.combined || user.classroom?.combined)
+          fail(
+            400,
+            "בשיעור משולב עורכים את רשימות התלמידים בכיתות המקור בלבד.",
+          );
+        await changeControl(store, user, "renew");
         if (
           !Array.isArray(b.students) ||
           b.students.length > 200 ||
