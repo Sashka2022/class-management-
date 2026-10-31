@@ -1,4 +1,5 @@
 import React, { useState, useRef, useLayoutEffect } from "react";
+import { MascotParade } from "./Mascot";
 import {
   Check,
   Trash2,
@@ -328,6 +329,10 @@ export function QuoteSlide({ quote }) {
       </span>
       <blockquote>{quote.text}</blockquote>
       {quote.studentName && <p>— {quote.studentName}</p>}
+      <MascotParade
+        className="activity-character-row"
+        variants={["calm", "birds"]}
+      />
     </div>
   );
 }

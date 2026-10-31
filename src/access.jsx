@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { PartnerLogos } from "./PartnerLogos";
-import { Mascot } from "./Mascot";
+import { Mascot, MascotParade } from "./Mascot";
 import { Brand } from "./Brand";
 import {
   Users,
@@ -91,6 +91,10 @@ export function Login({ onLogin, requestedClass, admin = false, onPair }) {
           <br />
           שהופכים כל יום להזדמנות.
         </p>
+        <MascotParade
+          className="login-character-line"
+          variants={["hats", "birds", "running"]}
+        />
         <small>כיתת דמה נפרדת להתנסות, לצד כיתות בית הספר</small>
       </section>
       <section className="login-form-area">
@@ -466,6 +470,7 @@ export function Admin({ onLogout }) {
           </aside>
         </div>
         <ReportPanel admin />
+        <MascotParade className="workspace-character-garden" />
         <PartnerLogos />
         <div className="admin-footnote">
           <ShieldCheck size={17} />

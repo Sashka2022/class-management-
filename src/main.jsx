@@ -67,7 +67,7 @@ import { DayPlan, Templates, stagesFor } from "./planning";
 import { MediaFrame, MediaPicker, StatusBoard } from "./content";
 import { Login, Admin } from "./access";
 import { PartnerLogos } from "./PartnerLogos";
-import { Mascot } from "./Mascot";
+import { Mascot, MascotParade, groupCharacters } from "./Mascot";
 import { Brand, BrandMark } from "./Brand";
 import { prepareFeedbackSound } from "./feedbackSound";
 import {
@@ -451,7 +451,12 @@ function Slide({ index = 0 }) {
           </span>
         </div>
       </div>
-      <PlantArt />
+      <div className="slide-characters">
+        <Mascot variant={["welcome", "birds", "focus", "balloon"][index]} />
+        <Mascot
+          variant={["planning", "hats", "sunglasses", "running"][index]}
+        />
+      </div>
       <div className="slide-footer">
         <span>מצגת כיתת דמה · מדעים</span>
         <span>{String(index + 1).padStart(2, "0")} / 04</span>
@@ -463,7 +468,10 @@ function ProjectedContent({ data }) {
   if (data.ended)
     return (
       <div className="activity end-slide">
-        <Mascot variant="celebration" />
+        <MascotParade
+          className="activity-character-row"
+          variants={["balloon", "sunglasses", "rest"]}
+        />
         <h2>עוד יום של צמיחה, ביחד.</h2>
         <p>תודה על הסקרנות ועל כל הרעיונות. נתראה בשיעור הבא!</p>
       </div>
@@ -473,9 +481,13 @@ function ProjectedContent({ data }) {
   if (type === "day")
     return (
       <div className="activity projected-day">
+        <MascotParade
+          className="activity-character-row"
+          variants={["planning", "running"]}
+        />
         <h2>סדר היום שלנו</h2>
         <p>{data.projection.date}</p>
-        <div>
+        <div className="day-plan-rows">
           {data.projection.rows.map((r) => (
             <div key={r.id}>
               <strong>{r.time}</strong>
@@ -490,7 +502,10 @@ function ProjectedContent({ data }) {
   if (type === "blank" || (type === "slides" && data.demo === false))
     return (
       <div className="activity empty-class-content">
-        <BookOpen size={42} />
+        <MascotParade
+          className="activity-character-row"
+          variants={["welcome", "birds"]}
+        />
         <h2>כאן יופיע התוכן של הכיתה</h2>
         <p>בחרו „תוכן, קבצים וקישורים” כדי להעלות חומר או להקליד טקסט.</p>
       </div>
@@ -502,9 +517,12 @@ function ProjectedContent({ data }) {
         <span className="eyebrow">לומדים טוב יותר ביחד</span>
         <h2>הקבוצות שלנו</h2>
         <div className="projected-groups">
-          {(data.projection.groups || []).map((g) => (
+          {(data.projection.groups || []).map((g, index) => (
             <div key={g.id}>
               <h3>
+                <Mascot
+                  variant={groupCharacters[index % groupCharacters.length]}
+                />
                 {g.emoji} {g.name}
               </h3>
               <HatDisplay config={g.thinkingHat} />
@@ -517,6 +535,10 @@ function ProjectedContent({ data }) {
   if (type === "heart")
     return (
       <div className="activity">
+        <MascotParade
+          className="activity-character-row"
+          variants={["balloon", "sunglasses"]}
+        />
         <Heart size={68} fill="#d78e78" color="#d78e78" />
         <h2>כל הכבוד, {data.projection.name}!</h2>
         <p>עוד רגע של צמיחה 🌱</p>
@@ -524,6 +546,16 @@ function ProjectedContent({ data }) {
     );
   return (
     <div className="activity">
+      <MascotParade
+        className="activity-character-row"
+        variants={
+          type === "entry"
+            ? ["welcome", "running"]
+            : type === "exit"
+              ? ["calm", "rest"]
+              : ["focus", "planning"]
+        }
+      />
       <span className="eyebrow">
         {type === "entry"
           ? "מתחילים ברגל ימין"
@@ -545,7 +577,6 @@ function ProjectedContent({ data }) {
             ? "אפשר לשתף בעל־פה, במחברת או על פתק."
             : `ציוד: ${data.projection.equipment || "רק הסקרנות שלכם"}`}
       </p>
-      <div className="activity-flower">✳</div>
     </div>
   );
 }
@@ -585,12 +616,26 @@ function Projector({ classId }) {
             <span>{data.ended ? "להתראות בשיעור הבא" : data.stage.name}</span>
             <span className="mono">{clock(seconds(data.timer))}</span>
           </div>
-          <div
-            className={`projector-content ${data.video ? "with-video" : ""}`}
-          >
-            <ProjectedContent data={data} />
-            {data.video && <MediaFrame media={data.video} />}
-            {!data.ended && <ClassModeBadge mode={data.classMode} />}
+          <div className="projector-scene">
+            <MascotParade
+              className="projector-character-rail projector-character-rail-start"
+              variants={
+                data.ended
+                  ? ["balloon", "sunglasses", "rest"]
+                  : ["welcome", "planning", "birds"]
+              }
+            />
+            <div
+              className={`projector-content ${data.video ? "with-video" : ""}`}
+            >
+              <ProjectedContent data={data} />
+              {data.video && <MediaFrame media={data.video} />}
+              {!data.ended && <ClassModeBadge mode={data.classMode} />}
+            </div>
+            <MascotParade
+              className="projector-character-rail projector-character-rail-end"
+              variants={["hats", "focus", "running"]}
+            />
           </div>
           <StatusBoard students={data.students} />
           {!data.ended && seconds(data.timer) === 0 && (
@@ -599,7 +644,10 @@ function Projector({ classId }) {
         </>
       ) : (
         <div className="activity">
-          <Sprout size={60} />
+          <MascotParade
+            className="activity-character-row"
+            variants={["welcome", "birds", "balloon"]}
+          />
           <h2>מחכים לשיעור שלנו</h2>
           <p>פתחו את מסך המחנכת באותו דפדפן כדי להתחיל.</p>
         </div>
@@ -1109,7 +1157,7 @@ function App({ classroom, onLogout }) {
         {state.groups.length ? (
           <>
             <div className="groups-grid">
-              {state.groups.map((g) => (
+              {state.groups.map((g, index) => (
                 <div className="group-card" key={g.id}>
                   <label className="field">
                     שם הקבוצה
@@ -1136,6 +1184,9 @@ function App({ classroom, onLogout }) {
                     מחיקת קבוצה
                   </button>
                   <h3>
+                    <Mascot
+                      variant={groupCharacters[index % groupCharacters.length]}
+                    />
                     {g.emoji} {g.name}
                     <small>{g.ids.length}</small>
                   </h3>
@@ -1484,7 +1535,7 @@ function App({ classroom, onLogout }) {
             <div className="stats">
               <div className="stat lesson-stat">
                 <span className="stat-icon sage">
-                  <BookOpen size={21} />
+                  <Mascot variant="focus" />
                 </span>
                 <div>
                   <small>עכשיו לומדים</small>
@@ -1504,7 +1555,7 @@ function App({ classroom, onLogout }) {
                 }
               >
                 <span className="stat-icon lavender">
-                  <Users size={21} />
+                  <Mascot variant="birds" />
                 </span>
                 <div>
                   <small>נוכחות בכיתה</small>
@@ -1516,7 +1567,7 @@ function App({ classroom, onLogout }) {
               </button>
               <div className="stat">
                 <span className="stat-icon peach">
-                  <Clock3 size={21} />
+                  <Mascot variant="running" />
                 </span>
                 <div>
                   <small>זמן השיעור</small>
@@ -1973,6 +2024,7 @@ function App({ classroom, onLogout }) {
             </>
           )}
         </main>
+        <MascotParade className="workspace-character-garden" />
         <PartnerLogos />
       </div>
       {toast && (

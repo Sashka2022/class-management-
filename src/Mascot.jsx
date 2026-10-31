@@ -22,6 +22,30 @@ const poses = {
   celebration: "balloon",
 };
 
+export const groupCharacters = [
+  "hats",
+  "birds",
+  "planning",
+  "sunglasses",
+  "balloon",
+  "calm",
+  "focus",
+  "running",
+];
+
+export function MascotParade({
+  className = "",
+  variants = ["welcome", "birds", "hats", "planning", "balloon", "running"],
+}) {
+  return (
+    <div className={`mascot-parade ${className}`} aria-hidden="true">
+      {variants.map((variant, index) => (
+        <Mascot key={`${variant}-${index}`} variant={variant} />
+      ))}
+    </div>
+  );
+}
+
 export function Mascot({ variant = "small" }) {
   const clipId = useId();
   const [x, y, width, height] =
