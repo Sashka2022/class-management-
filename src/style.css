@@ -2650,6 +2650,7 @@ select {
 }
 .login-form-area {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 50px 30px;
@@ -2657,6 +2658,22 @@ select {
 .login-card {
   width: 390px;
   max-width: 100%;
+}
+.partner-logos {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 24px 20px;
+}
+.partner-logos img {
+  display: block;
+  width: min(100%, 320px);
+  height: auto;
+}
+.login-form-area > .partner-logos {
+  margin-top: 24px;
+  padding-bottom: 0;
 }
 .login-card h2 {
   font-size: 29px;

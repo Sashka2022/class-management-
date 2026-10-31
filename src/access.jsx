@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { PartnerLogos } from "./PartnerLogos";
 import {
   Sprout,
   Users,
@@ -203,6 +204,7 @@ export function Login({ onLogin, requestedClass, admin = false, onPair }) {
             הכניסה בסיסמה משותפת מיועדת להדגמה. השתמשו בנתוני דוגמה בלבד.
           </p>
         </form>
+        <PartnerLogos />
       </section>
     </main>
   );
@@ -478,6 +480,7 @@ export function Admin({ onLogout }) {
           </aside>
         </div>
         <ReportPanel admin />
+        <PartnerLogos />
         <div className="admin-footnote">
           <ShieldCheck size={17} />
           <p>

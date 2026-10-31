@@ -64,6 +64,7 @@ import { usePairing, PairPanel, JoinDevice } from "./pairing";
 import { DayPlan, Templates, stagesFor } from "./planning";
 import { MediaFrame, MediaPicker, StatusBoard } from "./content";
 import { Login, Admin } from "./access";
+import { PartnerLogos } from "./PartnerLogos";
 import {
   LEGACY_KEY,
   SESSION_KEY,
@@ -1889,6 +1890,7 @@ function App({ classroom, onLogout }) {
             </>
           )}
         </main>
+        <PartnerLogos />
       </div>
       {toast && (
         <div className="toast" role="status">
