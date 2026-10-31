@@ -63,20 +63,48 @@ export function chooseHat(group, id) {
     ? { hatId: id, duration, timer: { remaining: duration * 60, end: null } }
     : null;
 }
+export function setThinkingHatsEnabled(state, enabled) {
+  state.thinkingHatsEnabled = enabled;
+  if (!enabled)
+    state.groups.forEach((group) => {
+      const timer = group.thinkingHat?.timer;
+      if (timer?.end)
+        group.thinkingHat.timer = { remaining: hatSeconds(timer), end: null };
+    });
+  syncProjectedHats(state);
+}
+export function assignGroupHats(state) {
+  if (!state.thinkingHatsEnabled) return;
+  const hats = [...thinkingHats];
+  for (let i = hats.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [hats[i], hats[j]] = [hats[j], hats[i]];
+  }
+  state.studentHats ||= {};
+  state.groups
+    .filter((group) => group.ids.length)
+    .forEach((group, index) => {
+      chooseHat(group, hats[index % hats.length].id);
+      group.ids.forEach((id) => delete state.studentHats[id]);
+    });
+}
 export function syncProjectedHats(state) {
   if (state.projection.type !== "groups") return;
   state.projection.groups = (state.projection.groups || []).map((published) => {
     const group = state.groups.find((g) => g.id === published.id);
-    if (!group) return published;
+    if (!group && state.thinkingHatsEnabled) return published;
     return {
       ...published,
-      thinkingHat: structuredClone(group.thinkingHat || null),
+      thinkingHat: state.thinkingHatsEnabled
+        ? structuredClone(group.thinkingHat || null)
+        : null,
       members: published.members.map((p) => ({
         ...p,
-        thinkingHat: hatFor(
-          state.studentHats?.[p.id] || group.thinkingHat?.hatId,
-        ),
-        personalHat: !!hatFor(state.studentHats?.[p.id]),
+        thinkingHat: state.thinkingHatsEnabled
+          ? hatFor(state.studentHats?.[p.id] || group.thinkingHat?.hatId)
+          : null,
+        personalHat:
+          !!state.thinkingHatsEnabled && !!hatFor(state.studentHats?.[p.id]),
       })),
     };
   });

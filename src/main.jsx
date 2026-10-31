@@ -51,6 +51,8 @@ import {
   GroupHatControls,
   StudentHatSelect,
   syncProjectedHats,
+  setThinkingHatsEnabled,
+  assignGroupHats,
 } from "./thinkingHats";
 import {
   RoleGuide,
@@ -66,6 +68,7 @@ import { MediaFrame, MediaPicker, StatusBoard } from "./content";
 import { Login, Admin } from "./access";
 import { PartnerLogos } from "./PartnerLogos";
 import { Mascot } from "./Mascot";
+import { prepareFeedbackSound } from "./feedbackSound";
 import {
   LEGACY_KEY,
   SESSION_KEY,
@@ -177,6 +180,8 @@ function initial() {
     groupRoles: {},
     autoAssignRoles: false,
     studentHats: {},
+    thinkingHatsEnabled: false,
+    autoAssignHats: false,
     library: [
       { id: "demo-slides", kind: "demo-slides", name: "מצגת כיתת דמה" },
     ],
@@ -198,6 +203,8 @@ function read(key = KEY, demo = true) {
     const stored = JSON.parse(localStorage.getItem(key));
     if (!stored) return freshClass(demo);
     stored.demo = demo;
+    stored.thinkingHatsEnabled ??= false;
+    if (!stored.thinkingHatsEnabled) setThinkingHatsEnabled(stored, false);
     stored.students.forEach((p) => {
       p.warningCount ??= p.warning || 0;
     });
@@ -721,6 +728,7 @@ function App({ classroom, onLogout }) {
           s.students,
           s.groupRoles,
           s.studentHats,
+          !!s.thinkingHatsEnabled,
         );
       }
     }, "התוכן עודכן במסך ההקרנה");
@@ -761,6 +769,8 @@ function App({ classroom, onLogout }) {
     }, "השלב עודכן. הטיימר מוכן להתחלה");
   }
   function heart(id) {
+    if (!state.students.some((p) => p.id === id)) return;
+    const play = prepareFeedbackSound("heart");
     update(
       (s) => {
         s.lessonHearts = currentHearts(s) + 1;
@@ -768,7 +778,10 @@ function App({ classroom, onLogout }) {
       },
       "נוסף לב של עידוד",
       true,
-    );
+    ).then((result) => {
+      if (result && currentHearts(result.next) > currentHearts(result.previous))
+        play();
+    });
   }
   function warn(id) {
     const student = state.students.find((p) => p.id === id);
@@ -777,6 +790,7 @@ function App({ classroom, onLogout }) {
       setModal({ type: "student", id, response: true });
       return;
     }
+    const play = prepareFeedbackSound("warning");
     update(
       (s) => {
         const current = s.students.find((p) => p.id === id);
@@ -787,7 +801,12 @@ function App({ classroom, onLogout }) {
       },
       "האזהרה עודכנה גם בכיתה",
       true,
-    );
+    ).then((result) => {
+      if (!result) return;
+      const before = result.previous.students.find((p) => p.id === id);
+      const after = result.next.students.find((p) => p.id === id);
+      if (after && before && after.warning > before.warning) play();
+    });
   }
   function attendance(id) {
     update(
@@ -826,6 +845,7 @@ function App({ classroom, onLogout }) {
       }));
       if (s.autoAssignRoles)
         s.groupRoles = assignGroupRoles(s.groups, s.groupRoles);
+      if (s.thinkingHatsEnabled && s.autoAssignHats) assignGroupHats(s);
     }, "החלוקה מוכנה לבדיקה — עדיין לא הוקרנה");
   }
   const active = state.stages[state.stage],
@@ -918,6 +938,7 @@ function App({ classroom, onLogout }) {
           state.students,
           state.groupRoles,
           state.studentHats,
+          !!state.thinkingHatsEnabled,
         ),
       ) !== JSON.stringify(state.projection.groups);
     return (
@@ -953,12 +974,52 @@ function App({ classroom, onLogout }) {
           </div>
         )}
         <RoleGuide />
-        <HatGuide />
-        <p className="muted">
-          בחרו כובע משותף לכל קבוצה, או כובע אישי ליד תלמיד. כשהקבוצות מוקרנות,
-          בחירה ומעבר בין כובעים מתעדכנים מיד בהקרנה בלי לפרסם שינויי תפקידים או
-          הרכב שטרם אושרו.
-        </p>
+        <label className="auto-role-option">
+          <input
+            type="checkbox"
+            checked={!!state.thinkingHatsEnabled}
+            onChange={(e) => {
+              const enabled = e.target.checked;
+              update((s) => setThinkingHatsEnabled(s, enabled));
+            }}
+          />
+          הפעלת כובעי החשיבה של דה בונו
+        </label>
+        {state.thinkingHatsEnabled && (
+          <>
+            <HatGuide />
+            <p className="muted">
+              בחרו כובע ידנית לכל קבוצה או לתלמיד, או חלקו כובעים אוטומטית.
+              בחלוקה אוטומטית כל קבוצה מקבלת כובע משותף במקום הבחירות הקודמות.
+              כשהקבוצות מוקרנות, שינויי כובעים מתעדכנים מיד בהקרנה.
+            </p>
+            <label className="auto-role-option">
+              <input
+                type="checkbox"
+                checked={!!state.autoAssignHats}
+                onChange={(e) => {
+                  const automatic = e.target.checked;
+                  update((s) => {
+                    s.autoAssignHats = automatic;
+                  });
+                }}
+              />
+              כובעים אוטומטיים בחלוקה חדשה
+            </label>
+            <button
+              className="secondary"
+              disabled={!state.groups.some((g) => g.ids.length)}
+              onClick={() =>
+                update((s) => {
+                  assignGroupHats(s);
+                  syncProjectedHats(s);
+                }, "כובעי החשיבה חולקו לקבוצות")
+              }
+            >
+              <Shuffle size={16} /> חלוקת כובעים אוטומטית
+            </button>
+          </>
+        )}
         <label className="auto-role-option">
           <input
             type="checkbox"
@@ -973,8 +1034,8 @@ function App({ classroom, onLogout }) {
         </label>
         <p className="muted">
           בחלוקה חדשה יוקצה לכל תלמיד תפקיד באופן אקראי ומאוזן בתוך הקבוצה,
-          במקום התפקיד הקודם. בקבוצה גדולה כמה תלמידים יקבלו אותו תפקיד.
-          אפשר לשנות ידנית לפני ההקרנה.
+          במקום התפקיד הקודם. בקבוצה גדולה כמה תלמידים יקבלו אותו תפקיד. אפשר
+          לשנות ידנית לפני ההקרנה.
         </p>
         <div className="group-controls">
           <label>
@@ -1077,21 +1138,23 @@ function App({ classroom, onLogout }) {
                     {g.emoji} {g.name}
                     <small>{g.ids.length}</small>
                   </h3>
-                  <GroupHatControls
-                    group={g}
-                    onChange={(fn, shared = false) =>
-                      update((s) => {
-                        const group = s.groups.find((x) => x.id === g.id);
-                        if (!group) return;
-                        fn(group);
-                        if (shared) {
-                          s.studentHats ||= {};
-                          group.ids.forEach((id) => delete s.studentHats[id]);
-                        }
-                        syncProjectedHats(s);
-                      }, "כובע החשיבה עודכן")
-                    }
-                  />
+                  {state.thinkingHatsEnabled && (
+                    <GroupHatControls
+                      group={g}
+                      onChange={(fn, shared = false) =>
+                        update((s) => {
+                          const group = s.groups.find((x) => x.id === g.id);
+                          if (!group) return;
+                          fn(group);
+                          if (shared) {
+                            s.studentHats ||= {};
+                            group.ids.forEach((id) => delete s.studentHats[id]);
+                          }
+                          syncProjectedHats(s);
+                        }, "כובע החשיבה עודכן")
+                      }
+                    />
+                  )}
                   {g.ids.map((id) => {
                     const p = state.students.find((p) => p.id === id);
                     return (
@@ -1114,18 +1177,20 @@ function App({ classroom, onLogout }) {
                                 }, "התפקיד עודכן בטיוטה. להצגה בכיתה בחרו „הצג קבוצות לכיתה”.")
                               }
                             />
-                            <StudentHatSelect
-                              student={p}
-                              hatId={state.studentHats?.[p.id]}
-                              onChange={(hatId) =>
-                                update((s) => {
-                                  s.studentHats ||= {};
-                                  if (hatId) s.studentHats[p.id] = hatId;
-                                  else delete s.studentHats[p.id];
-                                  syncProjectedHats(s);
-                                }, "כובע החשיבה האישי עודכן")
-                              }
-                            />
+                            {state.thinkingHatsEnabled && (
+                              <StudentHatSelect
+                                student={p}
+                                hatId={state.studentHats?.[p.id]}
+                                onChange={(hatId) =>
+                                  update((s) => {
+                                    s.studentHats ||= {};
+                                    if (hatId) s.studentHats[p.id] = hatId;
+                                    else delete s.studentHats[p.id];
+                                    syncProjectedHats(s);
+                                  }, "כובע החשיבה האישי עודכן")
+                                }
+                              />
+                            )}
                             <select
                               aria-label={`העברת ${p.name} לקבוצה`}
                               value={g.id}
@@ -2564,6 +2629,8 @@ function App({ classroom, onLogout }) {
                     s.groups = [];
                     s.groupRoles = {};
                     s.studentHats = {};
+                    s.thinkingHatsEnabled = false;
+                    s.autoAssignHats = false;
                     s.video = null;
                     s.classMode = null;
                     s.students.forEach((p) => {

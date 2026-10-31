@@ -68,9 +68,11 @@ export function snapshotGroups(
   students,
   assignments,
   studentHats = {},
+  hatsEnabled = false,
 ) {
   return groups.map((group) => ({
     ...group,
+    thinkingHat: hatsEnabled ? group.thinkingHat || null : null,
     members: group.ids
       .map((id) => students.find((p) => p.id === id))
       .filter(Boolean)
@@ -79,8 +81,10 @@ export function snapshotGroups(
         name: p.name,
         emoji: p.emoji,
         role: roleFor(assignments?.[p.id]),
-        thinkingHat: hatFor(studentHats[p.id] || group.thinkingHat?.hatId),
-        personalHat: !!hatFor(studentHats[p.id]),
+        thinkingHat: hatsEnabled
+          ? hatFor(studentHats[p.id] || group.thinkingHat?.hatId)
+          : null,
+        personalHat: hatsEnabled && !!hatFor(studentHats[p.id]),
       })),
   }));
 }

@@ -9,6 +9,13 @@ test.beforeEach(async ({ page }) => {
   );
   await page.goto("/");
   await page.getByRole("button", { name: "הקבוצות שלנו", exact: true }).click();
+  await expect(
+    page.getByLabel("הפעלת כובעי החשיבה של דה בונו", { exact: true }),
+  ).not.toBeChecked();
+  await expect(page.locator(".hat-guide")).toHaveCount(0);
+  await page
+    .getByLabel("הפעלת כובעי החשיבה של דה בונו", { exact: true })
+    .check();
   await page
     .getByRole("button", { name: "קבוצה ידנית חדשה", exact: true })
     .click();
@@ -210,4 +217,92 @@ test("a paired phone can change the shared hat and update the projector", async 
   } finally {
     await phoneContext.close();
   }
+});
+
+test("turning hats off hides published hats, pauses their timers and preserves choices until re-enabled", async ({
+  page,
+  context,
+}) => {
+  const toggle = page.getByLabel("הפעלת כובעי החשיבה של דה בונו", {
+    exact: true,
+  });
+  await groupHat(page).selectOption("blue");
+  await page
+    .getByLabel("כובע אישי של אמה כהן", { exact: true })
+    .selectOption("red");
+  await page.getByLabel("זמן לכובע — קבוצה 1", { exact: true }).fill("1");
+  await page
+    .getByRole("button", { name: "הפעלת זמן הכובע — קבוצה 1", exact: true })
+    .click();
+  await page.getByRole("button", { name: "הקרנת קבוצות", exact: true }).click();
+  const projector = await context.newPage();
+  await projector.goto("/?view=projector");
+  await expect(projector.locator(".hat-display")).toHaveCount(1);
+  await expect(projector.locator(".personal-hat-badge")).toHaveCount(1);
+  await toggle.uncheck();
+  await expect(page.locator(".group-hat-controls")).toHaveCount(0);
+  await expect(page.locator(".student-hat-control")).toHaveCount(0);
+  await expect(projector.locator(".hat-display")).toHaveCount(0);
+  await expect(projector.locator(".personal-hat-badge")).toHaveCount(0);
+  const paused = await state(page);
+  expect(paused.groups[0].thinkingHat.timer.end).toBeNull();
+  expect(paused.groups[0].thinkingHat.timer.remaining).toBeGreaterThan(0);
+  expect(paused.groups[0].thinkingHat.hatId).toBe("blue");
+  await page.reload();
+  await page.getByRole("button", { name: "הקבוצות שלנו", exact: true }).click();
+  await expect(toggle).not.toBeChecked();
+  await page.getByRole("button", { name: "הקרנת קבוצות", exact: true }).click();
+  await expect(projector.locator(".hat-display")).toHaveCount(0);
+  await toggle.check();
+  await expect(groupHat(page)).toHaveValue("blue");
+  await expect(projector.locator(".hat-display")).toContainText("ניהול החשיבה");
+  await expect(projector.locator(".personal-hat-badge")).toContainText("אדום");
+  expect((await state(page)).groups[0].thinkingHat.timer.end).toBeNull();
+});
+
+test("automatic hats support existing and new groups, balance all six hats and preserve projection drafts", async ({
+  page,
+}) => {
+  await page
+    .getByLabel("תפקיד של איתי לוי", { exact: true })
+    .selectOption("leader");
+  await page
+    .getByLabel("כובע אישי של איתי לוי", { exact: true })
+    .selectOption("red");
+  await page
+    .getByRole("button", { name: "חלוקת כובעים אוטומטית", exact: true })
+    .click();
+  let data = await state(page);
+  expect(data.studentHats).toEqual({});
+  expect(data.groups[0].thinkingHat.hatId).toBeTruthy();
+  expect(data.groupRoles.s0.roleId).toBe("leader");
+  await groupHat(page).selectOption("green");
+  await page.getByRole("button", { name: "הקרנת קבוצות", exact: true }).click();
+  const published = (await state(page)).projection;
+  const automatic = page.getByLabel("כובעים אוטומטיים בחלוקה חדשה", {
+    exact: true,
+  });
+  await expect(automatic).not.toBeChecked();
+  await automatic.check();
+  for (const count of [2, 8]) {
+    await page
+      .getByLabel("מספר קבוצות", { exact: true })
+      .selectOption(String(count));
+    await page.getByRole("button", { name: "חלוקה חדשה", exact: true }).click();
+    data = await state(page);
+    expect(data.groups).toHaveLength(count);
+    const hats = data.groups.map((g) => g.thinkingHat.hatId);
+    const counts = ["white", "red", "black", "yellow", "green", "blue"].map(
+      (id) => hats.filter((h) => h === id).length,
+    );
+    expect(hats.every(Boolean)).toBe(true);
+    expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(1);
+    expect(data.projection).toEqual(published);
+  }
+  await page.reload();
+  await page.getByRole("button", { name: "הקבוצות שלנו", exact: true }).click();
+  await expect(automatic).toBeChecked();
+  await automatic.uncheck();
+  await page.getByRole("button", { name: "חלוקה חדשה", exact: true }).click();
+  expect((await state(page)).groups.every((g) => !g.thinkingHat)).toBe(true);
 });
