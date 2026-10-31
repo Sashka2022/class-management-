@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { PartnerLogos } from "./PartnerLogos";
 import { Mascot } from "./Mascot";
+import { Brand } from "./Brand";
 import {
-  Sprout,
   Users,
   ShieldCheck,
   ArrowLeft,
@@ -76,14 +76,7 @@ export function Login({ onLogin, requestedClass, admin = false, onPair }) {
   return (
     <main className="login-page">
       <section className="login-story">
-        <a className="brand" href={location.pathname}>
-          <span className="brand-icon">
-            <Sprout size={32} />
-          </span>
-          <span>
-            ביחד<small>מקום לצמוח בו</small>
-          </span>
-        </a>
+        <Brand />
         <div className="login-illustration">
           <Mascot variant="hero" />
           <i>כל כיתה היא התחלה חדשה.</i>
@@ -103,7 +96,7 @@ export function Login({ onLogin, requestedClass, admin = false, onPair }) {
       <section className="login-form-area">
         <form onSubmit={submit} className="login-card">
           <span className="eyebrow">טוב שאתם כאן</span>
-          <h2>ברוכים הבאים לביחד</h2>
+          <h2>ברוכים הבאים לקלי קלות</h2>
           <p className="muted">בחרו איך להיכנס למרחב שלכם.</p>
           <div className="role-switch" aria-label="סוג כניסה">
             {[
@@ -276,14 +269,7 @@ export function Admin({ onLogout }) {
   return (
     <div className="admin-page">
       <header className="admin-top">
-        <a className="brand" href={location.pathname}>
-          <span className="brand-icon">
-            <Sprout size={26} />
-          </span>
-          <span>
-            ביחד<small>מקום לצמוח בו</small>
-          </span>
-        </a>
+        <Brand />
         <span className="admin-tag">
           <ShieldCheck size={16} /> מרחב אדמין
         </span>

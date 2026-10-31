@@ -34,7 +34,7 @@ test("self-contained HTML needs no asset requests and supports login, projection
   await context.setOffline(true);
   await page.goto(base);
   await expect(
-    page.getByRole("heading", { name: "ברוכים הבאים לביחד" }),
+    page.getByRole("heading", { name: "ברוכים הבאים לקלי קלות" }),
   ).toBeVisible();
   await page.getByLabel("הכיתה שלי", { exact: true }).selectOption("g2");
   await page.getByLabel("סיסמה", { exact: true }).fill("1111");

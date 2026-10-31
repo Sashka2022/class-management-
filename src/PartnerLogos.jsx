@@ -8,18 +8,18 @@ export function PartnerLogos() {
       <div className="partner-logo">
         <svg
           className="partner-logo-art"
-          viewBox="80 178 1002 346"
-          preserveAspectRatio="xMidYMax meet"
+          viewBox="88 186 986 368"
+          preserveAspectRatio="xMidYMid meet"
           role="img"
           aria-label="חותם — אחריות לחינוך בישראל"
           focusable="false"
         >
           <defs>
             <clipPath id={hotamClip}>
-              <rect x="80" y="178" width="1002" height="384" />
+              <rect x="88" y="186" width="986" height="368" />
             </clipPath>
           </defs>
-          {/* Align the subtitle baseline at y=524; the star extends below it. */}
+          {/* Include the whole mark and star in the shared visual height. */}
           <image
             href={partnerLogos}
             width="2170"

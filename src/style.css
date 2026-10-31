@@ -1,22 +1,22 @@
 :root {
   font-family: Arial, "Noto Sans Hebrew", sans-serif;
-  color: #253750;
-  background: #f5f7fc;
+  color: #28333d;
+  background: #f7f8fc;
   font-synthesis: none;
   font-weight: 400;
-  --sage: #2756d9;
-  --sage-dark: #193eaa;
-  --orange: #cf654e;
+  --sage: #456cc3;
+  --sage-dark: #315298;
+  --orange: #c66349;
   --muted: #64738b;
   --line: #dfe6f2;
   --paper: #fff;
-  --cream: #f5f7fc;
-  --brand-blue: #164bee;
-  --brand-blue-dark: #173caa;
+  --cream: #f7f8fc;
+  --brand-blue: #456cc3;
+  --brand-blue-dark: #315298;
   --brand-teal: #087e82;
-  --brand-teal-soft: #e0f5f3;
-  --brand-lilac: #eee8fb;
-  --brand-sunshine: #fff4cf;
+  --brand-teal-soft: #e5f4ef;
+  --brand-lilac: #f0eafa;
+  --brand-sunshine: #fff2d5;
 }
 * {
   box-sizing: border-box;
@@ -60,7 +60,7 @@ a {
 }
 button:focus-visible,
 a:focus-visible {
-  outline: 3px solid #164bee;
+  outline: 3px solid var(--brand-blue);
   outline-offset: 3px;
 }
 input:focus,
@@ -2670,7 +2670,7 @@ select {
   grid-template-columns: repeat(2, minmax(0, 190px));
   direction: ltr;
   justify-content: center;
-  align-items: end;
+  align-items: center;
   width: 100%;
   padding: 24px 20px;
   gap: clamp(22px, 5vw, 36px);
@@ -2678,10 +2678,10 @@ select {
 .partner-logo {
   overflow: visible;
   width: 100%;
-  aspect-ratio: 1002 / 346;
+  aspect-ratio: 222 / 78;
   min-width: 0;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
 }
 .partner-logo img,
@@ -2690,7 +2690,7 @@ select {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  object-position: center bottom;
+  object-position: center;
 }
 .partner-logo-art {
   overflow: visible;
@@ -5006,7 +5006,7 @@ select {
   color: var(--sage);
 }
 
-/* Shared colors connect the hand-drawn character with the Hotam palette. */
+/* Periwinkle, teal, lilac and warm yellow come from the Kalei Kalut logo. */
 .sidebar,
 .topbar,
 .stat,
@@ -5070,7 +5070,7 @@ select {
   background: var(--brand-sunshine);
 }
 .login-story {
-  background: linear-gradient(155deg, #eaf0ff, #e1f5f3 70%, #f1ebfc);
+  background: linear-gradient(155deg, #edf2fc, #e6f5ef 70%, #fcf1dd);
 }
 .login-story h1 {
   color: #233e78;
@@ -5090,15 +5090,19 @@ select {
 }
 .mascot {
   display: block;
+  width: 76px;
   height: auto;
-  object-fit: contain;
+  aspect-ratio: 1;
+  overflow: hidden;
   flex-shrink: 0;
   pointer-events: none;
   user-select: none;
 }
 .mascot-hero {
   width: min(100%, 290px);
-  max-height: 300px;
+}
+.login-illustration > .mascot {
+  transform: none;
 }
 .mascot-small {
   width: 76px;
@@ -5121,6 +5125,15 @@ select {
 .about-brand .mascot {
   width: 86px;
 }
+.finish-moment {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+.finish-moment .mascot {
+  width: 100px;
+}
 .admin-footnote {
   color: #385778;
   background: var(--brand-teal-soft);
@@ -5128,7 +5141,74 @@ select {
 .auto-role-option input {
   accent-color: var(--brand-blue);
 }
+.brand {
+  gap: 10px;
+  font-size: 24px;
+  letter-spacing: -0.8px;
+  padding-inline: 0;
+}
+.app-logo {
+  display: block;
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.brand small {
+  font-size: 10px;
+  letter-spacing: 0;
+  color: #596b80;
+}
+.brand-wordmark {
+  white-space: nowrap;
+}
+.login-story .brand > .brand-wordmark,
+.admin-top .brand > .brand-wordmark {
+  display: block;
+}
+.login-story .brand {
+  font-size: clamp(26px, 3vw, 38px);
+}
+.login-story .app-logo {
+  width: 90px;
+  height: 90px;
+}
+.login-story .brand small {
+  font-size: 12px;
+}
+.projection-top .app-logo {
+  width: 34px;
+  height: 34px;
+}
+.heading-intro {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-width: 0;
+}
+.heading-intro > div {
+  min-width: 0;
+}
+.heading-intro .mascot {
+  width: 100px;
+}
 @media (max-width: 750px) {
+  .admin-top .app-logo {
+    width: 40px;
+    height: 40px;
+  }
+  .login-story .app-logo {
+    width: 64px;
+    height: 64px;
+  }
+  .heading-intro {
+    justify-content: space-between;
+    width: 100%;
+    gap: 12px;
+  }
+  .heading-intro .mascot {
+    width: 68px;
+  }
   .login-illustration {
     display: flex;
     float: left;
@@ -5146,5 +5226,10 @@ select {
   }
   .login-story h1 {
     padding-left: 100px;
+  }
+}
+@media (max-width: 480px) {
+  .admin-tag {
+    display: none;
   }
 }

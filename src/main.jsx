@@ -68,6 +68,7 @@ import { MediaFrame, MediaPicker, StatusBoard } from "./content";
 import { Login, Admin } from "./access";
 import { PartnerLogos } from "./PartnerLogos";
 import { Mascot } from "./Mascot";
+import { Brand, BrandMark } from "./Brand";
 import { prepareFeedbackSound } from "./feedbackSound";
 import {
   LEGACY_KEY,
@@ -579,7 +580,7 @@ function Projector({ classId }) {
         <>
           <div className="projection-top">
             <span>
-              <Sprout size={22} /> ביחד
+              <BrandMark /> קלי קלות
             </span>
             <span>{data.ended ? "להתראות בשיעור הבא" : data.stage.name}</span>
             <span className="mono">{clock(seconds(data.timer))}</span>
@@ -1293,14 +1294,7 @@ function App({ classroom, onLogout }) {
     <div className={remote ? "app remote-app" : "app"}>
       {!remote && (
         <aside className="sidebar">
-          <a className="brand" href={location.pathname}>
-            <span className="brand-icon">
-              <Sprout size={29} />
-            </span>
-            <span>
-              ביחד<small>מקום לצמוח בו</small>
-            </span>
-          </a>
+          <Brand />
           <button
             className="class-picker"
             onClick={onLogout}
@@ -1361,7 +1355,7 @@ function App({ classroom, onLogout }) {
             className="sidebar-help"
             onClick={() => setModal({ type: "about" })}
           >
-            <Info size={17} /> על ביחד <ChevronLeft size={15} />
+            <Info size={17} /> על קלי קלות <ChevronLeft size={15} />
           </button>
           <div className="profile">
             <span className="profile-avatar">
@@ -1380,7 +1374,9 @@ function App({ classroom, onLogout }) {
           <div className="breadcrumb">
             המרחב שלי <ChevronLeft size={13} />{" "}
             <strong>
-              {remote ? "השלט שלי" : nav.find((n) => n[0] === page)?.[2]}
+              {remote
+                ? "קלי קלות · השלט שלי"
+                : nav.find((n) => n[0] === page)?.[2]}
             </strong>
           </div>
           <div className="top-actions">
@@ -1399,7 +1395,7 @@ function App({ classroom, onLogout }) {
               className="demo-badge"
               onClick={() => setModal({ type: "about" })}
             >
-              {state.demo ? "כיתת דמה · נתוני הדגמה" : "ביחד · מרחב הכיתה"}
+              {state.demo ? "כיתת דמה · נתוני הדגמה" : "קלי קלות · מרחב הכיתה"}
             </button>
             <IconButton
               icon={Bell}
@@ -1418,32 +1414,49 @@ function App({ classroom, onLogout }) {
           {!remote && (
             <>
               <div className="page-heading">
-                <div>
-                  <div className="eyebrow">
-                    {page === "home"
-                      ? "בוקר טוב, צוות ההוראה ☀"
-                      : "קצת סקרנות. הרבה אפשרויות."}
+                <div className="heading-intro">
+                  <div>
+                    <div className="eyebrow">
+                      {page === "home"
+                        ? "בוקר טוב, צוות ההוראה ☀"
+                        : "קצת סקרנות. הרבה אפשרויות."}
+                    </div>
+                    <h1>
+                      {page === "class"
+                        ? "כל תלמיד הוא עולם."
+                        : page === "groups"
+                          ? "טוב יותר, ביחד."
+                          : page === "templates"
+                            ? "התחלה טובה לשיעור הבא."
+                            : page === "home"
+                              ? "יום חדש לצמוח בו."
+                              : "השיעור שלנו"}
+                    </h1>
+                    <p>
+                      {page === "class"
+                        ? "מכירים, מעודדים ונותנים מקום לכל אחד."
+                        : page === "groups"
+                          ? "מחברים בין תלמידים, מפנים מקום לרעיונות."
+                          : page === "templates"
+                            ? "פחות זמן בהכנה, יותר זמן עם התלמידים."
+                            : "כל מה שצריך כדי להיות ברגע, עם הכיתה."}
+                    </p>
                   </div>
-                  <h1>
-                    {page === "class"
-                      ? "כל תלמיד הוא עולם."
-                      : page === "groups"
-                        ? "טוב יותר, ביחד."
-                        : page === "templates"
-                          ? "התחלה טובה לשיעור הבא."
-                          : page === "home"
-                            ? "יום חדש לצמוח בו."
-                            : "השיעור שלנו"}
-                  </h1>
-                  <p>
-                    {page === "class"
-                      ? "מכירים, מעודדים ונותנים מקום לכל אחד."
-                      : page === "groups"
-                        ? "מחברים בין תלמידים, מפנים מקום לרעיונות."
-                        : page === "templates"
-                          ? "פחות זמן בהכנה, יותר זמן עם התלמידים."
-                          : "כל מה שצריך כדי להיות ברגע, עם הכיתה."}
-                  </p>
+                  <Mascot
+                    variant={
+                      page === "home"
+                        ? "balloon"
+                        : page === "class"
+                          ? "birds"
+                          : page === "groups"
+                            ? "hats"
+                            : page === "templates"
+                              ? "planning"
+                              : page === "reports"
+                                ? "running"
+                                : "focus"
+                    }
+                  />
                 </div>
                 <div className="heading-actions">
                   <button
@@ -2033,7 +2046,7 @@ function App({ classroom, onLogout }) {
         <Modal
           title={
             {
-              about: "נעים להכיר, ביחד",
+              about: "נעים להכיר, קלי קלות",
               connect: "השלט שלך, קרוב אלייך",
               notifications: "מרחב שקט להוראה",
               students: "רגע של עידוד",
@@ -2106,7 +2119,7 @@ function App({ classroom, onLogout }) {
           {modal.type === "about" && (
             <div className="modal-body">
               <div className="about-brand">
-                <Mascot variant="small" />
+                <Mascot variant="calm" />
                 <h3>יותר מקום להוראה. יותר מקום לצמוח.</h3>
               </div>
               <p>
@@ -2562,7 +2575,10 @@ function App({ classroom, onLogout }) {
           )}
           {modal.type === "finish" && (
             <div className="modal-body">
-              <p>לא צריך למלא דוח. רק אם יש משהו שתרצי לזכור לפעם הבאה.</p>
+              <div className="finish-moment">
+                <Mascot variant="rest" />
+                <p>לא צריך למלא דוח. רק אם יש משהו שתרצי לזכור לפעם הבאה.</p>
+              </div>
               <label className="field">
                 מה הספקנו? מאיפה ממשיכים?
                 <textarea

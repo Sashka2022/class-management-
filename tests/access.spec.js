@@ -49,7 +49,7 @@ test("shared password gates teacher and admin entry and sessions survive refresh
   );
   await page.goto("/?view=admin");
   await expect(
-    page.getByRole("heading", { name: "ברוכים הבאים לביחד" }),
+    page.getByRole("heading", { name: "ברוכים הבאים לקלי קלות" }),
   ).toBeVisible();
   await login(page, "admin");
   await expect(
@@ -61,11 +61,11 @@ test("shared password gates teacher and admin entry and sessions survive refresh
   ).toBeVisible();
   await page.getByRole("button", { name: "יציאה", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "ברוכים הבאים לביחד" }),
+    page.getByRole("heading", { name: "ברוכים הבאים לקלי קלות" }),
   ).toBeVisible();
   await page.reload();
   await expect(
-    page.getByRole("heading", { name: "ברוכים הבאים לביחד" }),
+    page.getByRole("heading", { name: "ברוכים הבאים לקלי קלות" }),
   ).toBeVisible();
   expect(
     await page.evaluate(() =>

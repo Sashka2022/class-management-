@@ -1,25 +1,50 @@
-import React from "react";
-import mascot from "./assets/curious-mascot.webp";
-import welcome from "./assets/mascot-welcome.webp";
-import curious from "./assets/mascot-curious.webp";
-import celebration from "./assets/mascot-celebration.webp";
+import React, { useId } from "react";
+import characters from "./assets/kalei-kalut-characters.webp";
 
+// Individual artwork bounds in the supplied character sheet, including loose curls.
+const artwork = {
+  welcome: [55, 76, 286, 367],
+  balloon: [454, 14, 326, 441],
+  birds: [808, 100, 356, 340],
+  focus: [1233, 18, 315, 436],
+  rest: [1585, 179, 379, 245],
+  hats: [50, 468, 299, 311],
+  planning: [434, 469, 364, 309],
+  sunglasses: [798, 468, 316, 314],
+  calm: [1189, 483, 341, 293],
+  running: [1586, 494, 350, 282],
+};
 const poses = {
-  hero: welcome,
-  empty: curious,
-  curious,
-  celebration,
+  hero: "welcome",
+  small: "sunglasses",
+  curious: "birds",
+  empty: "balloon",
+  celebration: "balloon",
 };
 
 export function Mascot({ variant = "small" }) {
+  const clipId = useId();
+  const [x, y, width, height] =
+    artwork[poses[variant] || variant] || artwork.calm;
   return (
-    <img
+    <svg
       className={`mascot mascot-${variant}`}
-      src={poses[variant] || mascot}
-      alt=""
+      viewBox={`${x} ${y} ${width} ${height}`}
+      preserveAspectRatio="xMidYMid meet"
       aria-hidden="true"
-      draggable="false"
-      decoding="async"
-    />
+      focusable="false"
+    >
+      <defs>
+        <clipPath id={clipId}>
+          <rect x={x} y={y} width={width} height={height} />
+        </clipPath>
+      </defs>
+      <image
+        href={characters}
+        width="1983"
+        height="793"
+        clipPath={`url(#${clipId})`}
+      />
+    </svg>
   );
 }
