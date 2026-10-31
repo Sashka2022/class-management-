@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { PartnerLogos } from "./PartnerLogos";
+import { Mascot } from "./Mascot";
 import {
   Sprout,
   Users,
@@ -84,8 +85,7 @@ export function Login({ onLogin, requestedClass, admin = false, onPair }) {
           </span>
         </a>
         <div className="login-illustration">
-          <span>✳</span>
-          <Sprout size={160} strokeWidth={1} />
+          <Mascot variant="hero" />
           <i>כל כיתה היא התחלה חדשה.</i>
         </div>
         <h1>

@@ -65,6 +65,7 @@ import { DayPlan, Templates, stagesFor } from "./planning";
 import { MediaFrame, MediaPicker, StatusBoard } from "./content";
 import { Login, Admin } from "./access";
 import { PartnerLogos } from "./PartnerLogos";
+import { Mascot } from "./Mascot";
 import {
   LEGACY_KEY,
   SESSION_KEY,
@@ -454,7 +455,7 @@ function ProjectedContent({ data }) {
   if (data.ended)
     return (
       <div className="activity end-slide">
-        <Sprout size={64} />
+        <Mascot variant="celebration" />
         <h2>עוד יום של צמיחה, ביחד.</h2>
         <p>תודה על הסקרנות ועל כל הרעיונות. נתראה בשיעור הבא!</p>
       </div>
@@ -1158,7 +1159,7 @@ function App({ classroom, onLogout }) {
           </>
         ) : (
           <div className="empty">
-            <Shapes size={48} />
+            <Mascot variant="empty" />
             <h3>רעיונות גדולים מתחילים ביחד</h3>
             <p>בחרו מספר קבוצות וצרו חלוקה ראשונה.</p>
           </div>
@@ -1279,7 +1280,7 @@ function App({ classroom, onLogout }) {
             ))}
           </nav>
           <div className="sidebar-note">
-            <span className="note-flower">✳</span>
+            <Mascot variant="small" />
             <strong>גם צעד קטן הוא צמיחה.</strong>
             <p>
               יש לך מקום להשפיע,
@@ -2036,7 +2037,7 @@ function App({ classroom, onLogout }) {
           {modal.type === "about" && (
             <div className="modal-body">
               <div className="about-brand">
-                <Sprout size={40} />
+                <Mascot variant="small" />
                 <h3>יותר מקום להוראה. יותר מקום לצמוח.</h3>
               </div>
               <p>

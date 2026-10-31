@@ -1,16 +1,22 @@
 :root {
   font-family: Arial, "Noto Sans Hebrew", sans-serif;
-  color: #303e36;
-  background: #f7f7f2;
+  color: #253750;
+  background: #f5f7fc;
   font-synthesis: none;
   font-weight: 400;
-  --sage: #73846a;
-  --sage-dark: #53694f;
-  --orange: #ca7655;
-  --muted: #939a91;
-  --line: #e8ebe3;
+  --sage: #2756d9;
+  --sage-dark: #193eaa;
+  --orange: #cf654e;
+  --muted: #64738b;
+  --line: #dfe6f2;
   --paper: #fff;
-  --cream: #f7f7f2;
+  --cream: #f5f7fc;
+  --brand-blue: #164bee;
+  --brand-blue-dark: #173caa;
+  --brand-teal: #087e82;
+  --brand-teal-soft: #e0f5f3;
+  --brand-lilac: #eee8fb;
+  --brand-sunshine: #fff4cf;
 }
 * {
   box-sizing: border-box;
@@ -54,13 +60,13 @@ a {
 }
 button:focus-visible,
 a:focus-visible {
-  outline: 3px solid #cc9472;
+  outline: 3px solid #164bee;
   outline-offset: 3px;
 }
 input:focus,
 textarea:focus,
 select:focus {
-  outline: 2px solid #7f936f;
+  outline: 2px solid #087e82;
   outline-offset: 2px;
 }
 svg {
@@ -5001,4 +5007,144 @@ select {
   display: grid;
   place-items: center;
   color: var(--sage);
+}
+
+/* Shared colors connect the hand-drawn character with the Hotam palette. */
+.sidebar,
+.topbar,
+.stat,
+.secondary,
+.login-page,
+.admin-page {
+  background-color: #fff;
+}
+.brand-icon,
+.login-story .brand-icon,
+.admin-top .brand-icon {
+  background: #e6edff;
+  color: var(--brand-blue);
+}
+.primary {
+  background: var(--brand-blue);
+  color: #fff;
+}
+.primary:hover {
+  background: var(--brand-blue-dark);
+}
+.secondary {
+  color: #344f81;
+  border-color: #d4def2;
+}
+.secondary:hover,
+.sidebar nav button:hover {
+  background: #f0f4ff;
+}
+.sidebar nav button.selected {
+  color: var(--brand-blue-dark);
+  background: #e9efff;
+}
+.nav-dot {
+  background: var(--brand-blue);
+}
+.stage-item.current {
+  background: #eef3ff;
+  border-color: #d4def7;
+}
+.current .stage-number {
+  background: var(--brand-blue);
+}
+.current .stage-main strong {
+  color: var(--brand-blue-dark);
+}
+.eyebrow,
+.empty h3 {
+  color: var(--brand-teal);
+}
+.sage {
+  color: var(--brand-teal);
+  background: var(--brand-teal-soft);
+}
+.lavender {
+  color: #7250a0;
+  background: var(--brand-lilac);
+}
+.peach {
+  color: #986327;
+  background: var(--brand-sunshine);
+}
+.login-story {
+  background: linear-gradient(155deg, #eaf0ff, #e1f5f3 70%, #f1ebfc);
+}
+.login-story h1 {
+  color: #233e78;
+}
+.login-story > p,
+.login-story > small,
+.login-illustration > i,
+.page-heading p,
+.sidebar-note p,
+.muted {
+  color: #586b86;
+}
+.login-illustration {
+  min-height: 280px;
+  margin-top: 20px;
+  padding-bottom: 28px;
+}
+.mascot {
+  display: block;
+  height: auto;
+  object-fit: contain;
+  flex-shrink: 0;
+  pointer-events: none;
+  user-select: none;
+}
+.mascot-hero {
+  width: min(100%, 290px);
+  max-height: 300px;
+}
+.mascot-small {
+  width: 76px;
+}
+.sidebar-note {
+  padding-top: 18px;
+  padding-bottom: 18px;
+}
+.mascot-empty {
+  width: 144px;
+  margin: 0 auto 20px;
+}
+.mascot-celebration {
+  width: min(28%, 180px);
+  margin: 0 auto 10px;
+}
+.about-brand .mascot {
+  width: 86px;
+}
+.admin-footnote {
+  color: #385778;
+  background: var(--brand-teal-soft);
+}
+.auto-role-option input {
+  accent-color: var(--brand-blue);
+}
+@media (max-width: 750px) {
+  .login-illustration {
+    display: flex;
+    float: left;
+    width: 90px;
+    min-height: 90px;
+    padding: 0;
+    margin: 12px 0 0;
+    align-self: flex-end;
+    position: absolute;
+    left: 7%;
+    bottom: 18px;
+  }
+  .login-illustration > i {
+    display: none;
+  }
+  .login-story h1 {
+    padding-left: 100px;
+  }
 }
