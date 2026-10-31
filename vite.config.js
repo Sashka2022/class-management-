@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import { createPairHandler, memoryStore } from "./server/pairing.js";
+import { createSchoolHandler } from "./server/school.js";
 export default defineConfig({
   plugins: [
     {
@@ -7,7 +8,14 @@ export default defineConfig({
       configureServer(server) {
         const store = memoryStore(),
           handler = createPairHandler(() => store);
-        server.middlewares.use("/api/pair", async (req, res) => {
+        if (process.env.BEYACHAD_TEST_RUN === "1")
+          server.middlewares.use("/__test/reset", (req, res) => {
+            store.clear();
+            res.statusCode = 200;
+            res.end("ok");
+          });
+        const schoolHandler = createSchoolHandler(() => store);
+        const serve = (target) => async (req, res) => {
           let size = 0,
             chunks = [];
           for await (const chunk of req) {
@@ -34,8 +42,10 @@ export default defineConfig({
             res.setHeader("Content-Type", "application/json");
             res.end(JSON.stringify(body));
           };
-          await handler(req, res);
-        });
+          await target(req, res);
+        };
+        server.middlewares.use("/api/pair", serve(handler));
+        server.middlewares.use("/api/school", serve(schoolHandler));
       },
     },
   ],

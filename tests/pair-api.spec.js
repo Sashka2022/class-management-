@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import {
   createPairHandler,
   memoryStore,
@@ -36,7 +36,7 @@ test("pair API rejects unauthorized access, consumes code once, detects conflict
   const created = await request({
     action: "create",
     password: "1111",
-    classroom: { id: "g2", name: "ג׳2" },
+    classroom: { id: "g2", name: "כיתת דמה" },
     state: sample(),
   });
   expect(created.status).toBe(200);

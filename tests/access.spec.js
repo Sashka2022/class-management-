@@ -1,5 +1,5 @@
 import { createTemplate } from "./helpers/templates";
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 async function login(page, role = "teacher", classId = "g2") {
   await page
     .getByRole("button", {
@@ -45,7 +45,7 @@ test("shared password gates teacher and admin entry and sessions survive refresh
   ).toBeVisible();
   await page.reload();
   await expect(page.getByRole("button", { name: "החלפת כיתה" })).toContainText(
-    "ג׳2",
+    "כיתת דמה",
   );
   await page.goto("/?view=admin");
   await expect(
@@ -102,12 +102,12 @@ test("class data and projections are isolated and any teacher can resume the cla
   const other = await context.newPage();
   await other.goto("/?view=projector&class=g1");
   await expect(
-    other.getByRole("heading", { name: "מה צמחים צריכים כדי לגדול?" }),
+    other.getByRole("heading", { name: "כאן יופיע התוכן של הכיתה" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "יציאה", exact: true }).click();
   await login(page);
   await expect(page.getByRole("button", { name: "החלפת כיתה" })).toContainText(
-    "ג׳2",
+    "כיתת דמה",
   );
   await page.getByRole("button", { name: "התלמידים", exact: true }).click();
   await expect(
@@ -127,7 +127,7 @@ test("admin totals persist across new lessons, undo is counted, completion is id
   await login(admin, "admin");
   const row = () =>
     admin.getByRole("row").filter({
-      has: admin.getByRole("rowheader", { name: "כיתה ג׳2", exact: true }),
+      has: admin.getByRole("rowheader", { name: "כיתת דמה", exact: true }),
     });
   await expect(row().locator("td").nth(2)).toHaveText("0");
   await page.getByRole("button", { name: "לב לאיתי לוי", exact: true }).click();
@@ -148,25 +148,25 @@ test("admin totals persist across new lessons, undo is counted, completion is id
   await expect(row().locator("td").nth(1)).toHaveText("2");
   await admin.reload();
   await expect(row().locator("td").nth(2)).toHaveText("2");
-  await admin.getByLabel("שם הכיתה", { exact: true }).fill("ד׳1");
+  await admin.getByLabel("שם הכיתה", { exact: true }).fill("ז1");
   await admin.getByRole("button", { name: "הוספת כיתה", exact: true }).click();
-  await expect(admin.getByRole("status")).toHaveText("כיתה ד׳1 נוספה בהצלחה");
-  await admin.getByLabel("שם הכיתה", { exact: true }).fill("ד׳1");
+  await expect(admin.getByRole("status")).toHaveText("כיתה ז1 נוספה בהצלחה");
+  await admin.getByLabel("שם הכיתה", { exact: true }).fill("ז1");
   await admin.getByRole("button", { name: "הוספת כיתה", exact: true }).click();
   await expect(admin.getByRole("alert")).toHaveText("כיתה בשם הזה כבר קיימת.");
   await page.getByRole("button", { name: "יציאה", exact: true }).click();
   await expect(
-    page.getByRole("option", { name: "כיתה ד׳1", exact: true }),
+    page.getByRole("option", { name: "כיתה ז1", exact: true }),
   ).toHaveCount(1);
   await login(
     page,
     "teacher",
     await page
-      .getByRole("option", { name: "כיתה ד׳1", exact: true })
+      .getByRole("option", { name: "כיתה ז1", exact: true })
       .getAttribute("value"),
   );
   await expect(page.getByRole("button", { name: "החלפת כיתה" })).toContainText(
-    "ד׳1",
+    "ז1",
   );
 });
 test("login and admin fit narrow screens", async ({ page }) => {

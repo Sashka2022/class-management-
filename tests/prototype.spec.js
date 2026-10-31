@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import assert from "node:assert/strict";
 test.beforeEach(async ({ context }) => {
   await context.addInitScript(() => {
@@ -111,7 +111,7 @@ test("a complete lesson keeps private edits separate from the live projection", 
   await proj
     .getByRole("heading", { name: "עוד יום של צמיחה, ביחד." })
     .waitFor();
-  await page.getByRole("button", { name: "על האבטיפוס" }).click();
+  await page.getByRole("button", { name: "על ביחד" }).click();
   await page.getByRole("button", { name: "איפוס נתוני ההדגמה" }).click();
   await page.setViewportSize({ width: 390, height: 844 });
 

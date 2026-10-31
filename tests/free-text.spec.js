@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() =>
     sessionStorage.setItem(
@@ -78,7 +78,7 @@ test("direct text projection also saves to the library and treats markup as plai
   await expect(projection.locator(".free-text-body img")).toHaveCount(0);
   expect(await projection.evaluate(() => window.textExecuted)).toBeUndefined();
   const library = await page.evaluate(
-    () => JSON.parse(localStorage.getItem("beyachad-demo-v1")).library,
+    () => JSON.parse(localStorage.getItem("beyachad-demo-v1")).library.filter(m=>m.kind === "text"),
   );
   expect(library).toHaveLength(1);
   expect(library[0].text).toBe(text);

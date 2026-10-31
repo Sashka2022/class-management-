@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import { createTemplate } from "./helpers/templates";
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() =>

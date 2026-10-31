@@ -1,3 +1,4 @@
+import { schoolYear } from "../shared/schoolPolicy";
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -43,6 +44,7 @@ import {
   Presentation,
 } from "lucide-react";
 import "./style.css";
+import { useCloudArchive, ArchiveStatus, ReportPanel } from "./school";
 import {
   HatGuide,
   HatDisplay,
@@ -65,6 +67,7 @@ import {
   LEGACY_KEY,
   SESSION_KEY,
   classrooms,
+  classLabel,
   classKey,
   projectionKey,
   storedClass,
@@ -116,6 +119,7 @@ const avatars = [
 ];
 function initial() {
   return {
+    demo: true,
     students: names.map((name, i) => ({
       id: `s${i}`,
       name,
@@ -124,6 +128,7 @@ function initial() {
       late: false,
       hearts: 0,
       warning: 0,
+      warningCount: 0,
     })),
     stages: [
       {
@@ -168,7 +173,9 @@ function initial() {
     groups: [],
     groupRoles: {},
     studentHats: {},
-    library: [],
+    library: [
+      { id: "demo-slides", kind: "demo-slides", name: "מצגת כיתת דמה" },
+    ],
     video: null,
     classMode: null,
     quotes: [],
@@ -184,14 +191,57 @@ function initial() {
 }
 function read(key = KEY, demo = true) {
   try {
-    return JSON.parse(localStorage.getItem(key)) || freshClass(demo);
+    const stored = JSON.parse(localStorage.getItem(key));
+    if (!stored) return freshClass(demo);
+    stored.demo = demo;
+    stored.students.forEach((p) => {
+      p.warningCount ??= p.warning || 0;
+    });
+    stored.lessons = (stored.lessons || []).filter(
+      (l) => (l.expiresAt || schoolYear(l.endedAt).expiresAt) > Date.now(),
+    );
+    if (schoolYear(stored.started).expiresAt <= Date.now()) {
+      stored.lessonHearts = 0;
+      stored.students.forEach((p) => {
+        p.hearts = 0;
+        p.warning = 0;
+        p.warningCount = 0;
+      });
+    }
+    if (demo) {
+      stored.library ||= [];
+      if (!stored.library.some((m) => m.kind === "demo-slides"))
+        stored.library.unshift({
+          id: "demo-slides",
+          kind: "demo-slides",
+          name: "מצגת כיתת דמה",
+        });
+    } else if (stored.projection?.type === "slides")
+      stored.projection = { type: "blank" };
+    return stored;
   } catch {
     return freshClass(demo);
   }
 }
 function freshClass(demo) {
   const s = initial();
-  if (!demo) s.students = [];
+  if (!demo) {
+    s.demo = false;
+    s.students = [];
+    s.library = [];
+    s.stages = [
+      {
+        id: crypto.randomUUID(),
+        name: "תחילת שיעור",
+        minutes: 45,
+        instruction: "",
+        equipment: "",
+      },
+    ];
+    s.stage = 0;
+    s.projection = { type: "blank" };
+    s.timer = { remaining: 2700, end: null };
+  }
   return s;
 }
 function seconds(timer) {
@@ -210,6 +260,7 @@ function clock(n) {
 function publish(s, key = PUBLIC) {
   const data = {
     projection: s.projection,
+    demo: s.demo,
     slide: s.slide,
     timer: s.timer,
     stage: { name: s.stages[s.stage].name },
@@ -390,7 +441,7 @@ function Slide({ index = 0 }) {
       </div>
       <PlantArt />
       <div className="slide-footer">
-        <span>מדעים · כיתה ג׳</span>
+        <span>מצגת כיתת דמה · מדעים</span>
         <span>{String(index + 1).padStart(2, "0")} / 04</span>
       </div>
     </div>
@@ -424,6 +475,14 @@ function ProjectedContent({ data }) {
       </div>
     );
   if (type === "media") return <MediaFrame media={data.projection.media} />;
+  if (type === "blank" || (type === "slides" && data.demo === false))
+    return (
+      <div className="activity empty-class-content">
+        <BookOpen size={42} />
+        <h2>כאן יופיע התוכן של הכיתה</h2>
+        <p>בחרו „תוכן, קבצים וקישורים” כדי להעלות חומר או להקליד טקסט.</p>
+      </div>
+    );
   if (type === "slides") return <Slide index={data.slide} />;
   if (type === "groups")
     return (
@@ -482,7 +541,10 @@ function Projector({ classId }) {
   const PUBLIC = projectionKey(classId);
   const get = () => {
     try {
-      return JSON.parse(localStorage.getItem(PUBLIC));
+      const data = JSON.parse(localStorage.getItem(PUBLIC));
+      return data
+        ? { ...data, demo: !!classrooms().find((c) => c.id === classId)?.demo }
+        : null;
     } catch {
       return null;
     }
@@ -565,6 +627,25 @@ function App({ classroom, onLogout }) {
   }
   const pair = usePairing(classroom, state, applyPaired);
   const remote = new URLSearchParams(location.search).get("view") === "remote";
+  const cloud = useCloudArchive({
+    classroom,
+    state,
+    update,
+    onRoster: (rows) => {
+      const next = structuredClone(readCurrent());
+      const old = new Map(next.students.map((p) => [p.id, p]));
+      next.students = rows.map((p) => ({
+        ...old.get(p.id),
+        ...p,
+        present: old.get(p.id)?.present ?? true,
+        late: old.get(p.id)?.late ?? false,
+        hearts: old.get(p.id)?.hearts ?? 0,
+        warning: old.get(p.id)?.warning ?? 0,
+        warningCount: old.get(p.id)?.warningCount ?? 0,
+      }));
+      applyPaired(next);
+    },
+  });
   useEffect(() => {
     publish(state, PUBLIC);
     localStorage.setItem(KEY, JSON.stringify(state));
@@ -585,7 +666,7 @@ function App({ classroom, onLogout }) {
   }, [toast]);
   function update(fn, message, undo = false) {
     if (pair.connection) {
-      pair
+      return pair
         .mutate(fn)
         .then(({ previous, next }) => {
           if (message)
@@ -594,9 +675,12 @@ function App({ classroom, onLogout }) {
               previous: undo ? previous : null,
               after: undo ? next : null,
             });
+          return { previous, next };
         })
-        .catch((e) => setToast({ message: e.message }));
-      return;
+        .catch((e) => {
+          setToast({ message: e.message });
+          return null;
+        });
     }
 
     const previous = readCurrent();
@@ -611,12 +695,18 @@ function App({ classroom, onLogout }) {
         previous: undo ? previous : null,
         after: undo ? next : null,
       });
+    return Promise.resolve({ previous, next });
   }
   function project(type, extra = {}) {
     update((s) => {
       if (type === "media" && extra.media?.kind === "text")
         rememberMedia(s, extra.media);
-      s.projection = { type, ...extra };
+      if (type === "media" && extra.media?.kind !== "text")
+        s.lastPresentation = { type: "media", media: extra.media };
+      s.projection =
+        type === "slides"
+          ? s.lastPresentation || { type: s.demo ? "slides" : "blank" }
+          : { type, ...extra };
       if (type === "task") {
         s.projection.instruction = s.stages[s.stage].instruction;
         s.projection.equipment = s.stages[s.stage].equipment;
@@ -642,7 +732,9 @@ function App({ classroom, onLogout }) {
     setModal(null);
   }
   function navigateSlide(delta) {
+    if (!state.demo) return;
     update((s) => {
+      s.lastPresentation = null;
       s.slide = Math.max(0, Math.min(3, s.slide + delta));
       s.projection = { type: "slides" };
     });
@@ -684,7 +776,10 @@ function App({ classroom, onLogout }) {
     update(
       (s) => {
         const current = s.students.find((p) => p.id === id);
+        const before = current.warning;
         current.warning = Math.min(2, current.warning + 1);
+        current.warningCount =
+          (current.warningCount ?? before) + (current.warning - before);
       },
       "האזהרה עודכנה גם בכיתה",
       true,
@@ -1097,6 +1192,7 @@ function App({ classroom, onLogout }) {
     ["class", Users, "הכיתה שלי"],
     ["groups", Shapes, "הקבוצות שלנו"],
     ["templates", Files, "תבניות שיעור"],
+    ["reports", Files, "סיכומי תלמידים"],
     ["mode", Flag, "מצב כיתה"],
     ["quotes", MessageSquareQuote, "שווה ציטוט"],
   ];
@@ -1117,9 +1213,11 @@ function App({ classroom, onLogout }) {
             onClick={onLogout}
             aria-label="החלפת כיתה"
           >
-            <span className="class-mark">{classroom.name.slice(0, 2)}</span>
+            <span className="class-mark">
+              {classroom.demo ? "🌱" : classroom.name.slice(0, 2)}
+            </span>
             <div>
-              <strong>כיתה {classroom.name}</strong>
+              <strong>{classLabel(classroom)}</strong>
               <small>בית הספר שלנו</small>
             </div>
             <ChevronLeft size={16} />
@@ -1170,14 +1268,14 @@ function App({ classroom, onLogout }) {
             className="sidebar-help"
             onClick={() => setModal({ type: "about" })}
           >
-            <Info size={17} /> על האבטיפוס <ChevronLeft size={15} />
+            <Info size={17} /> על ביחד <ChevronLeft size={15} />
           </button>
           <div className="profile">
             <span className="profile-avatar">
               <Users size={17} />
             </span>
             <div>
-              <strong>מורה · כיתה {classroom.name}</strong>
+              <strong>מורה · {classLabel(classroom)}</strong>
               <small>טוב שאת כאן</small>
             </div>
             <span className="online-dot" />
@@ -1208,7 +1306,7 @@ function App({ classroom, onLogout }) {
               className="demo-badge"
               onClick={() => setModal({ type: "about" })}
             >
-              אבטיפוס · נתוני הדגמה
+              {state.demo ? "כיתת דמה · נתוני הדגמה" : "ביחד · מרחב הכיתה"}
             </button>
             <IconButton
               icon={Bell}
@@ -1217,7 +1315,13 @@ function App({ classroom, onLogout }) {
             />
           </div>
         </header>
-        <main className="workspace">
+        <main className="workspace" aria-busy={!cloud.ready}>
+          {!cloud.ready && (
+            <div className="cloud-loading" role="status">
+              טוענים את רשימת הכיתה מהענן…
+            </div>
+          )}
+          <ArchiveStatus cloud={cloud} demo={state.demo} />
           {!remote && (
             <>
               <div className="page-heading">
@@ -1278,7 +1382,9 @@ function App({ classroom, onLogout }) {
                 </span>
                 <div>
                   <small>עכשיו לומדים</small>
-                  <strong>מגלים את עולם הצמחים</strong>
+                  <strong>
+                    {state.demo ? "שיעור בכיתת דמה" : classLabel(classroom)}
+                  </strong>
                 </div>
                 <span className={`live-pill ${state.ended ? "finished" : ""}`}>
                   <i />
@@ -1329,14 +1435,14 @@ function App({ classroom, onLogout }) {
               <div className="remote-arrows">
                 <button
                   className="secondary"
-                  disabled={state.slide === 0}
+                  disabled={!state.demo || state.slide === 0}
                   onClick={() => navigateSlide(-1)}
                 >
                   <ChevronRight /> הקודם
                 </button>
                 <button
                   className="primary"
-                  disabled={state.slide === 3}
+                  disabled={!state.demo || state.slide === 3}
                   onClick={() => navigateSlide(1)}
                 >
                   הבא <ChevronLeft />
@@ -1394,6 +1500,8 @@ function App({ classroom, onLogout }) {
               update={update}
               onShow={(data) => project("day", data)}
             />
+          ) : page === "reports" ? (
+            <ReportPanel classroom={classroom} localState={state} />
           ) : page === "class" ? (
             <section className="panel roster-panel">
               <div className="panel-heading">
@@ -1527,46 +1635,55 @@ function App({ classroom, onLogout }) {
                       <span aria-hidden="true">❞</span> שווה ציטוט
                     </button>
                   </div>
-                  <div className="slide-navigation">
-                    <div className="slide-nav-buttons">
-                      <IconButton
-                        icon={ChevronRight}
-                        label="השקף הקודם"
-                        disabled={state.slide === 0}
-                        onClick={() => navigateSlide(-1)}
-                      />
-                      <span>
-                        שקף <b>{state.slide + 1}</b> מתוך 4
-                      </span>
-                      <IconButton
-                        icon={ChevronLeft}
-                        label="השקף הבא"
-                        disabled={state.slide === 3}
-                        onClick={() => navigateSlide(1)}
-                      />
-                    </div>
-                    <div className="slide-dots">
-                      {slideTitles.map((t, i) => (
-                        <button
-                          aria-label={`שקף ${i + 1}: ${t}`}
-                          className={state.slide === i ? "active" : ""}
-                          key={t}
-                          onClick={() =>
-                            update((s) => {
-                              s.slide = i;
-                              s.projection = { type: "slides" };
-                            })
-                          }
+                  {state.demo ? (
+                    <div className="slide-navigation">
+                      <div className="slide-nav-buttons">
+                        <IconButton
+                          icon={ChevronRight}
+                          label="השקף הקודם"
+                          disabled={!state.demo || state.slide === 0}
+                          onClick={() => navigateSlide(-1)}
                         />
-                      ))}
+                        <span>
+                          שקף <b>{state.slide + 1}</b> מתוך 4
+                        </span>
+                        <IconButton
+                          icon={ChevronLeft}
+                          label="השקף הבא"
+                          disabled={!state.demo || state.slide === 3}
+                          onClick={() => navigateSlide(1)}
+                        />
+                      </div>
+                      <div className="slide-dots">
+                        {(state.demo ? slideTitles : []).map((t, i) => (
+                          <button
+                            aria-label={`שקף ${i + 1}: ${t}`}
+                            className={state.slide === i ? "active" : ""}
+                            key={t}
+                            onClick={() =>
+                              update((s) => {
+                                s.slide = i;
+                                s.lastPresentation = null;
+                                s.projection = {
+                                  type: s.demo ? "slides" : "blank",
+                                };
+                              })
+                            }
+                          />
+                        ))}
+                      </div>
+                      <button
+                        className="text-button"
+                        onClick={() => setModal({ type: "slides" })}
+                      >
+                        <Files size={15} /> כל השקפים
+                      </button>
                     </div>
-                    <button
-                      className="text-button"
-                      onClick={() => setModal({ type: "slides" })}
-                    >
-                      <Files size={15} /> כל השקפים
-                    </button>
-                  </div>
+                  ) : (
+                    <div className="normal-content-hint">
+                      {classLabel(classroom)} · התוכן נשמר בספרייה של הכיתה
+                    </div>
+                  )}
                   <div className="activity-toolbar">
                     <button onClick={() => project("task")}>
                       <Presentation size={18} />
@@ -1779,10 +1896,10 @@ function App({ classroom, onLogout }) {
                       if (
                         JSON.stringify(before[k]) !== JSON.stringify(applied[k])
                       ) {
-                        if (k === "hearts")
-                          current.hearts = Math.max(
+                        if (k === "hearts" || k === "warningCount")
+                          current[k] = Math.max(
                             0,
-                            current.hearts - (applied.hearts - before.hearts),
+                            current[k] - (applied[k] - before[k]),
                           );
                         else if (
                           JSON.stringify(current[k]) ===
@@ -1876,7 +1993,12 @@ function App({ classroom, onLogout }) {
                 }, "התוכן נשמר בספרייה. ההקרנה לא השתנתה.")
               }
               onShow={(media) => {
-                project("media", { media });
+                if (media.kind === "demo-slides") {
+                  update((s) => {
+                    s.lastPresentation = null;
+                    s.projection = { type: "slides" };
+                  }, "מצגת כיתת דמה מוצגת");
+                } else project("media", { media });
                 setModal(null);
               }}
               onVideo={(media) => {
@@ -1894,32 +2016,37 @@ function App({ classroom, onLogout }) {
                 <h3>יותר מקום להוראה. יותר מקום לצמוח.</h3>
               </div>
               <p>
-                זהו אבטיפוס אינטראקטיבי עם נתוני הדגמה בלבד. אפשר לנסות מצגת,
-                שלבי שיעור, טיימר, נוכחות, לבבות ואזהרות שמוצגים גם בכיתה,
-                קבוצות וכרטיסי פעילות.
+                מרחב להוראה עם תוכן לבחירת המורה, שלבי שיעור, טיימר, נוכחות,
+                לבבות ואזהרות שמוצגים גם בכיתה, קבוצות וכרטיסי פעילות.
               </p>
               <div className="notice">
                 <Info size={20} />
                 <p>
-                  הנתונים נשמרים בדפדפן. חיבור מכשיר נוסף עם קוד משתף את מצב
-                  השיעור דרך שרת למשך החיבור. באתר נדרשת הגדרת אחסון Redis.
-                  הכניסה בסיסמה המשותפת היא להדגמה, ללא חשבונות אישיים. ניתן
-                  להעלות PDF, תמונות, אודיו ווידאו מתוך חלון התוכן.
+                  רשימת התלמידים וסיכומי השיעורים נשמרים בענן. התוכן המועלה
+                  והעבודה השוטפת נשמרים גם בדפדפן. חיבור נייד עם QR או קוד משתף
+                  את השיעור למשך ארבע שעות. הכניסה משתמשת בסיסמה משותפת, ללא
+                  חשבונות אישיים. ניתן להעלות PDF, תמונות, אודיו ווידאו מתוך
+                  חלון התוכן.
                 </p>
               </div>
-              <p>אין להזין מידע אמיתי על תלמידים באבטיפוס.</p>
-              <button
-                className="secondary"
-                onClick={() => {
-                  update(
-                    (s) => Object.assign(s, freshClass(classroom.id === "g2")),
-                    "נתוני ההדגמה של הכיתה אופסו",
-                  );
-                  setModal(null);
-                }}
-              >
-                <RotateCcw size={16} /> איפוס נתוני ההדגמה
-              </button>
+              <p>
+                סיכום נוכחות, לבבות ומספר אזהרות נשמר עד סוף שנת הלימודים, ללא
+                פירוט אירועים. את הסיכומים אפשר למחוק במסך סיכומי תלמידים.
+              </p>
+              {state.demo && (
+                <button
+                  className="secondary"
+                  onClick={() => {
+                    update(
+                      (s) => Object.assign(s, freshClass(true)),
+                      "נתוני ההדגמה של הכיתה אופסו",
+                    );
+                    setModal(null);
+                  }}
+                >
+                  <RotateCcw size={16} /> איפוס נתוני ההדגמה
+                </button>
+              )}
             </div>
           )}
           {modal.type === "notifications" && (
@@ -1939,8 +2066,8 @@ function App({ classroom, onLogout }) {
               </div>
               <h3>מנסים שליטה משני מסכים</h3>
               <p>
-                באבטיפוס אפשר לפתוח שלט מותאם לנייד בלשונית נוספת באותו דפדפן.
-                כל שינוי יסתנכרן עם מסך השיעור וההקרנה.
+                אפשר לסרוק QR בנייד או לפתוח שלט בלשונית נוספת באותו דפדפן. כל
+                שינוי יסתנכרן עם מסך השיעור וההקרנה.
               </p>
               <div className="notice">
                 <Info size={20} />
@@ -2181,7 +2308,7 @@ function App({ classroom, onLogout }) {
                 מצגת הדגמה מובנית · בחירת שקף מעדכנת מיד את ההקרנה.
               </p>
               <div className="slide-choices">
-                {slideTitles.map((t, i) => (
+                {(state.demo ? slideTitles : []).map((t, i) => (
                   <button
                     key={t}
                     onClick={() => {
@@ -2298,6 +2425,7 @@ function App({ classroom, onLogout }) {
                       late: false,
                       hearts: 0,
                       warning: 0,
+                      warningCount: 0,
                     }),
                   );
                 }, `נוספו ${list.length} תלמידים`);
@@ -2401,7 +2529,8 @@ function App({ classroom, onLogout }) {
                     s.started = Date.now();
                     s.ended = false;
                     s.slide = 0;
-                    s.projection = { type: "slides" };
+                    s.projection = { type: s.demo ? "slides" : "blank" };
+                    s.lastPresentation = null;
                     s.summary = "";
                     s.groups = [];
                     s.groupRoles = {};
@@ -2411,6 +2540,7 @@ function App({ classroom, onLogout }) {
                     s.students.forEach((p) => {
                       p.hearts = 0;
                       p.warning = 0;
+                      p.warningCount = 0;
                     });
                   }, "שיעור חדש מוכן לצמיחה");
                   setPage("lesson");

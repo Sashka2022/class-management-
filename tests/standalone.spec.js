@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -36,6 +36,7 @@ test("self-contained HTML needs no asset requests and supports login, projection
   await expect(
     page.getByRole("heading", { name: "ברוכים הבאים לביחד" }),
   ).toBeVisible();
+  await page.getByLabel("הכיתה שלי", { exact: true }).selectOption("g2");
   await page.getByLabel("סיסמה", { exact: true }).fill("1111");
   await page.getByRole("button", { name: "נכנסים לכיתה", exact: true }).click();
   await expect(
@@ -61,7 +62,7 @@ test("self-contained HTML needs no asset requests and supports login, projection
     page.getByRole("heading", { name: "כל הכיתות, סיפור משותף." }),
   ).toBeVisible();
   const row = page.getByRole("row").filter({
-    has: page.getByRole("rowheader", { name: "כיתה ג׳2", exact: true }),
+    has: page.getByRole("rowheader", { name: "כיתת דמה", exact: true }),
   });
   await expect(row.locator("td").nth(2)).toHaveText("1");
   await page.reload();

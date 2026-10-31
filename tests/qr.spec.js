@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import jsQR from "jsqr";
 async function createPair(page) {
   await page.addInitScript(() =>

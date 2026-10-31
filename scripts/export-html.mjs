@@ -13,7 +13,7 @@ for (const match of [...html.matchAll(scriptTag)]) {
   html = html.replace(
     match[0],
     () =>
-      `<script type="module">${source.replace(/<\/script/gi, "<\\/script")}</script>`,
+      `<script type="module">window.__BEYACHAD_STANDALONE__=true;${source.replace(/<\/script/gi, "<\\/script")}</script>`,
   );
 }
 for (const match of [...html.matchAll(styleTag)]) {

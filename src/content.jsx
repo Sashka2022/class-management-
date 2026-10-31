@@ -359,45 +359,60 @@ export function MediaPicker({ library, onAdd, onShow, onVideo }) {
         אתרים וסרטונים מסוימים חוסמים הצגה בתוך חלון. אפשר לפתוח אותם בלשונית.
         הפעלה, עצירה וגלילה בתוך תוכן מוטמע נעשות בכל חלון בנפרד.
       </p>
-      <div className="media-library">
-        {library.map((m) => (
-          <div key={m.id}>
-            <strong>{m.name}</strong>
-            <div>
-              <button className="primary" onClick={() => onShow(m)}>
-                הצג לכיתה
-              </button>
-              {m.kind === "text" && (
-                <button
-                  className="secondary"
-                  aria-label={`עריכת הטקסט ${m.name}`}
-                  onClick={() => {
-                    setEditingText(m.id);
-                    setTextTitle(m.title || "");
-                    setTextBody(m.text || "");
-                  }}
-                >
-                  עריכת טקסט
-                </button>
-              )}
-              {m.url && (
-                <>
-                  <button className="secondary" onClick={() => onVideo(m)}>
-                    חלון נוסף
-                  </button>
-                  <a
-                    href={m.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`פתיחת ${m.name} בלשונית`}
-                  >
-                    <ExternalLink size={17} />
-                  </a>
-                </>
-              )}
-            </div>
-          </div>
+      {library
+        .filter((m) => m.kind === "demo-slides")
+        .map((m) => (
+          <section className="demo-presentation-card" key={m.id}>
+            <h3>{m.name}</h3>
+            <p className="muted">
+              מצגת ההדגמה שמורה בספרייה של כיתת הדמה בלבד.
+            </p>
+            <button className="secondary" onClick={() => onShow(m)}>
+              הצגת מצגת כיתת הדמה
+            </button>
+          </section>
         ))}
+      <div className="media-library">
+        {library
+          .filter((m) => m.kind !== "demo-slides")
+          .map((m) => (
+            <div key={m.id}>
+              <strong>{m.name}</strong>
+              <div>
+                <button className="primary" onClick={() => onShow(m)}>
+                  הצג לכיתה
+                </button>
+                {m.kind === "text" && (
+                  <button
+                    className="secondary"
+                    aria-label={`עריכת הטקסט ${m.name}`}
+                    onClick={() => {
+                      setEditingText(m.id);
+                      setTextTitle(m.title || "");
+                      setTextBody(m.text || "");
+                    }}
+                  >
+                    עריכת טקסט
+                  </button>
+                )}
+                {m.url && (
+                  <>
+                    <button className="secondary" onClick={() => onVideo(m)}>
+                      חלון נוסף
+                    </button>
+                    <a
+                      href={m.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`פתיחת ${m.name} בלשונית`}
+                    >
+                      <ExternalLink size={17} />
+                    </a>
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
       </div>
     </div>
   );

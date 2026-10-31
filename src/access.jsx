@@ -15,21 +15,61 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import { classrooms, addClass, classMetrics } from "./classrooms";
+import {
+  classrooms,
+  addClass,
+  classMetrics,
+  classLabel,
+  storedClass,
+  currentHearts,
+} from "./classrooms";
+
+import {
+  schoolRequest,
+  loadCatalog,
+  cacheCatalog,
+  session,
+  ReportPanel,
+} from "./school";
 
 export function Login({ onLogin, requestedClass, admin = false, onPair }) {
   const [role, setRole] = useState(admin ? "admin" : "teacher"),
     [classId, setClassId] = useState(requestedClass || classrooms()[0].id),
     [password, setPassword] = useState(""),
     [error, setError] = useState(""),
-    [show, setShow] = useState(false);
-  function submit(e) {
+    [show, setShow] = useState(false),
+    [catalog, setCatalog] = useState(classrooms);
+  useEffect(() => {
+    if (window.__BEYACHAD_STANDALONE__) return;
+    loadCatalog()
+      .then(() => setCatalog(classrooms()))
+      .catch(() => {});
+  }, []);
+  async function submit(e) {
     e.preventDefault();
-    if (password !== "1111") {
-      setError("הסיסמה אינה נכונה. נסו שוב.");
+    setError("");
+    if (window.__BEYACHAD_STANDALONE__) {
+      if (password !== "1111") {
+        setError("הסיסמה אינה נכונה. נסו שוב.");
+        return;
+      }
+      onLogin({ role, classId: role === "teacher" ? classId : null });
       return;
     }
-    onLogin({ role, classId: role === "teacher" ? classId : null });
+    try {
+      const result = await schoolRequest(
+        { action: "login", role, classId, password },
+        null,
+      );
+      cacheCatalog(result.classes);
+      onLogin({
+        role: result.role,
+        classId: result.classId,
+        authToken: result.authToken,
+      });
+    } catch (e) {
+      setError(e.message);
+    }
   }
   return (
     <main className="login-page">
@@ -57,7 +97,7 @@ export function Login({ onLogin, requestedClass, admin = false, onPair }) {
           <br />
           שהופכים כל יום להזדמנות.
         </p>
-        <small>אבטיפוס · נתוני הדגמה בלבד</small>
+        <small>כיתת דמה נפרדת להתנסות, לצד כיתות בית הספר</small>
       </section>
       <section className="login-form-area">
         <form onSubmit={submit} className="login-card">
@@ -97,9 +137,9 @@ export function Login({ onLogin, requestedClass, admin = false, onPair }) {
                     setError("");
                   }}
                 >
-                  {classrooms().map((c) => (
+                  {catalog.map((c) => (
                     <option value={c.id} key={c.id}>
-                      כיתה {c.name}
+                      {classLabel(c)}
                     </option>
                   ))}
                 </select>
@@ -172,27 +212,64 @@ export function Admin({ onLogout }) {
     [query, setQuery] = useState(""),
     [name, setName] = useState(""),
     [error, setError] = useState(""),
-    [added, setAdded] = useState("");
+    [added, setAdded] = useState(""),
+    [overview, setOverview] = useState(null),
+    [cloudError, setCloudError] = useState("");
   useEffect(() => {
     const refresh = () => setRevision((v) => v + 1);
     window.addEventListener("storage", refresh);
+    window.addEventListener("school-data", refresh);
     const t = setInterval(refresh, 30000);
     return () => {
       window.removeEventListener("storage", refresh);
+      window.removeEventListener("school-data", refresh);
       clearInterval(t);
     };
   }, []);
-  const rows = classrooms().map(classMetrics),
-    totals = rows.reduce(
-      (a, c) => ({
-        students: a.students + c.students,
-        present: a.present + c.present,
-        hearts: a.hearts + c.hearts,
-        completed: a.completed + c.completed,
-        active: a.active + Number(c.active),
-      }),
-      { students: 0, present: 0, hearts: 0, completed: 0, active: 0 },
-    );
+  useEffect(() => {
+    if (!session().authToken || window.__BEYACHAD_STANDALONE__) return;
+    let cancelled = false;
+    schoolRequest({ action: "overview" })
+      .then((result) => {
+        if (!cancelled) {
+          cacheCatalog(result.classes);
+          setOverview(result);
+          setCloudError("");
+        }
+      })
+      .catch((e) => !cancelled && setCloudError(e.message));
+    return () => {
+      cancelled = true;
+    };
+  }, [revision]);
+  const rows = classrooms().map((c) => {
+      const local = classMetrics(c);
+      if (!overview) return local;
+      const saved = overview.totals[c.id] || {};
+      const state = storedClass(c.id);
+      const current =
+        state && !state.ended && state.started >= (saved.latestEndedAt || 0);
+      return {
+        ...local,
+        students: overview.rosters[c.id]?.students.length ?? local.students,
+        present: current ? local.present : saved.latestPresent || 0,
+        visited: local.visited || saved.records > 0,
+        completed: saved.completed || 0,
+        hearts: (saved.hearts || 0) + (current ? currentHearts(state) : 0),
+      };
+    }),
+    totals = rows
+      .filter((c) => !c.demo)
+      .reduce(
+        (a, c) => ({
+          students: a.students + c.students,
+          present: a.present + c.present,
+          hearts: a.hearts + c.hearts,
+          completed: a.completed + c.completed,
+          active: a.active + Number(c.active),
+        }),
+        { students: 0, present: 0, hearts: 0, completed: 0, active: 0 },
+      );
   const maxHearts = Math.max(1, ...rows.map((c) => c.hearts));
   return (
     <div className="admin-page">
@@ -213,6 +290,11 @@ export function Admin({ onLogout }) {
         </button>
       </header>
       <main className="admin-workspace">
+        {cloudError && (
+          <p role="alert" className="form-error">
+            {cloudError}
+          </p>
+        )}
         <div className="admin-heading">
           <div>
             <span className="eyebrow">רואים את התמונה הרחבה</span>
@@ -274,7 +356,7 @@ export function Admin({ onLogout }) {
                     .filter((c) => c.name.includes(query))
                     .map((c) => (
                       <tr key={c.id}>
-                        <th scope="row">כיתה {c.name}</th>
+                        <th scope="row">{classLabel(c)}</th>
                         <td>
                           {c.visited ? (
                             <>
@@ -324,7 +406,7 @@ export function Admin({ onLogout }) {
               <p className="muted">לבבות מצטברים לפי כיתה</p>
               {rows.map((c) => (
                 <div className="heart-chart-row" key={c.id}>
-                  <span>כיתה {c.name}</span>
+                  <span>{classLabel(c)}</span>
                   <div className="heart-track">
                     <i style={{ width: `${(c.hearts / maxHearts) * 100}%` }} />
                   </div>
@@ -341,10 +423,18 @@ export function Admin({ onLogout }) {
               </h2>
               <p className="muted">כיתה חדשה תופיע מיד במסך הכניסה למורים.</p>
               <form
-                onSubmit={(e) => {
+                onSubmit={async (e) => {
                   e.preventDefault();
                   try {
-                    const c = addClass(name);
+                    let c;
+                    if (session().authToken) {
+                      const result = await schoolRequest({
+                        action: "addClass",
+                        name,
+                      });
+                      cacheCatalog(result.classes);
+                      c = result.classroom;
+                    } else c = addClass(name);
                     setAdded(`כיתה ${c.name} נוספה בהצלחה`);
                     setName("");
                     setError("");
@@ -387,12 +477,13 @@ export function Admin({ onLogout }) {
             </section>
           </aside>
         </div>
+        <ReportPanel admin />
         <div className="admin-footnote">
           <ShieldCheck size={17} />
           <p>
-            הסיכום כולל שיעורים שהסתיימו ולבבות גם מהשיעור הנוכחי. נוכחות מציגה
-            את הסימון האחרון בכל כיתה. אין כאן דירוג תלמידים או היסטוריית משמעת
-            אישית. הנתונים מקומיים לדפדפן בלבד.
+            סיכומי השיעורים נשמרים בענן ומשותפים למורים ולאדמין. נוכחות מציגה את
+            השיעור השמור האחרון. כיתת הדמה אינה נכללת בספירה הבית ספרית. נתוני
+            שיעור שטרם הסתיים זמינים במכשיר המורה ובשלט המחובר.
           </p>
         </div>
       </main>

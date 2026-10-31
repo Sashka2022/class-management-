@@ -28,16 +28,57 @@ export function memoryStore() {
     },
     async create(k, v, ttl) {
       if (value(k) !== null) return false;
-      map.set(k, { value: v, until: Date.now() + ttl * 1000 });
+      map.set(k, { value: v, until: ttl ? Date.now() + ttl * 1000 : Infinity });
       return true;
     },
     async cas(k, old, next, ttl) {
       if (value(k) !== old) return false;
-      map.set(k, { value: next, until: Date.now() + ttl * 1000 });
+      map.set(k, {
+        value: next,
+        until: ttl ? Date.now() + ttl * 1000 : Infinity,
+      });
       return true;
     },
     async del(k) {
       map.delete(k);
+    },
+    async many(keys) {
+      return keys.map(value);
+    },
+    async list(k) {
+      return [...(value(k) || new Set())];
+    },
+    clear() {
+      map.clear();
+    },
+    async atomic({
+      key,
+      expected,
+      next,
+      ttl,
+      writes = [],
+      adds = [],
+      removes = [],
+      deletes = [],
+    }) {
+      if (value(key) !== expected) return false;
+      const put = (k, v, t) =>
+        map.set(k, { value: v, until: t ? Date.now() + t * 1000 : Infinity });
+      put(key, next, ttl);
+      for (const w of writes) put(w.key, w.value, w.ttl);
+      for (const a of adds) {
+        const set = new Set(value(a.key) || []);
+        set.add(a.member);
+        put(a.key, set, a.ttl);
+      }
+      for (const r of removes) {
+        const set = new Set(value(r.key) || []);
+        set.delete(r.member);
+        if (set.size) put(r.key, set, r.ttl);
+        else map.delete(r.key);
+      }
+      for (const k of deletes) map.delete(k);
+      return true;
     },
     async limit(k, max) {
       const n = Number(value(k) || 0) + 1;
@@ -74,7 +115,9 @@ export function redisStore() {
   return {
     get: (k) => cmd(["GET", k]),
     create: async (k, v, ttl) =>
-      (await cmd(["SET", k, v, "EX", ttl, "NX"])) === "OK",
+      (await cmd(
+        ttl ? ["SET", k, v, "EX", ttl, "NX"] : ["SET", k, v, "NX"],
+      )) === "OK",
     cas: async (k, old, next, ttl) =>
       !!(await cmd([
         "EVAL",
@@ -85,6 +128,37 @@ export function redisStore() {
         next,
         ttl,
       ])),
+    many: (keys) =>
+      keys.length ? cmd(["MGET", ...keys]) : Promise.resolve([]),
+    list: (k) => cmd(["SMEMBERS", k]),
+    async atomic(job) {
+      const keys = [
+        ...new Set([
+          job.key,
+          ...(job.writes || []).map((w) => w.key),
+          ...(job.adds || []).map((w) => w.key),
+          ...(job.removes || []).map((w) => w.key),
+          ...(job.deletes || []),
+        ]),
+      ];
+      const at = (k) => keys.indexOf(k) + 1;
+      const payload = {
+        ...job,
+        writes: (job.writes || []).map((w) => ({ ...w, key: at(w.key) })),
+        adds: (job.adds || []).map((w) => ({ ...w, key: at(w.key) })),
+        removes: (job.removes || []).map((w) => ({ ...w, key: at(w.key) })),
+        deletes: (job.deletes || []).map(at),
+      };
+      const lua =
+        "local p=cjson.decode(ARGV[1]); if redis.call('GET',KEYS[1])~=p.expected then return 0 end; local function put(k,v,t) if t and t>0 then redis.call('SET',KEYS[k],v,'EX',t) else redis.call('SET',KEYS[k],v) end end; put(1,p.next,p.ttl); for _,w in ipairs(p.writes) do put(w.key,w.value,w.ttl) end; for _,a in ipairs(p.adds) do redis.call('SADD',KEYS[a.key],a.member); redis.call('EXPIRE',KEYS[a.key],a.ttl) end; for _,a in ipairs(p.removes) do redis.call('SREM',KEYS[a.key],a.member) end; for _,k in ipairs(p.deletes) do redis.call('DEL',KEYS[k]) end; return 1";
+      return !!(await cmd([
+        "EVAL",
+        lua,
+        keys.length,
+        ...keys,
+        JSON.stringify(payload),
+      ]));
+    },
     del: (k) => cmd(["DEL", k]),
     limit: async (k, max) =>
       (await cmd([

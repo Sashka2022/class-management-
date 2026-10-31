@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 test("a separate mobile browser can warn from the student list, undo and confirm further responses", async ({
   page,
   browser,

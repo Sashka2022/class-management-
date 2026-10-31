@@ -1,5 +1,5 @@
 import { createTemplate } from "./helpers/templates";
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() =>
     sessionStorage.setItem(
