@@ -2666,37 +2666,30 @@ select {
   max-width: 100%;
 }
 .partner-logos {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 180px));
   direction: ltr;
   justify-content: center;
   align-items: center;
   width: 100%;
   padding: 24px 20px;
-  gap: 20px;
+  gap: clamp(16px, 4vw, 28px);
 }
 .partner-logo {
-  position: relative;
   overflow: hidden;
-  width: min(42%, 150px);
-  height: 72px;
+  width: 100%;
+  aspect-ratio: 1002 / 384;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.partner-logo img {
+.partner-logo img,
+.partner-logo-art {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
-}
-.partner-logo-hotam img {
-  position: absolute;
-  width: 200%;
-  max-width: none;
-  height: auto;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
 }
 .login-form-area > .partner-logos {
   margin-top: 24px;
@@ -5105,6 +5098,9 @@ select {
 }
 .mascot-small {
   width: 76px;
+}
+.mascot-curious {
+  width: 72px;
 }
 .sidebar-note {
   padding-top: 18px;

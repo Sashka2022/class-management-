@@ -927,7 +927,11 @@ function App({ classroom, onLogout }) {
             <span className="eyebrow">לכל אחד יש מקום</span>
             <h2>צומחים בקבוצות</h2>
           </div>
-          <Shapes size={28} />
+          {state.groups.length ? (
+            <Mascot variant="curious" />
+          ) : (
+            <Shapes size={28} />
+          )}
         </div>
         <p className="muted">
           חלוקה אקראית של {present} התלמידים הנוכחים. בודקים, משנים ורק אז
