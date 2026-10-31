@@ -10,11 +10,11 @@ export function Brand() {
     <a
       className="brand"
       href={location.pathname}
-      aria-label="קלי קלות — מרחב למחשבות ולמידה"
+      aria-label="קלי קלוח — מרחב למחשבות ולמידה"
     >
       <BrandMark />
       <span className="brand-wordmark">
-        קלי קלות<small>מרחב למחשבות ולמידה</small>
+        קלי קלוח<small>מרחב למחשבות ולמידה</small>
       </span>
     </a>
   );

@@ -580,7 +580,7 @@ function Projector({ classId }) {
         <>
           <div className="projection-top">
             <span>
-              <BrandMark /> קלי קלות
+              <BrandMark /> קלי קלוח
             </span>
             <span>{data.ended ? "להתראות בשיעור הבא" : data.stage.name}</span>
             <span className="mono">{clock(seconds(data.timer))}</span>
@@ -1355,7 +1355,7 @@ function App({ classroom, onLogout }) {
             className="sidebar-help"
             onClick={() => setModal({ type: "about" })}
           >
-            <Info size={17} /> על קלי קלות <ChevronLeft size={15} />
+            <Info size={17} /> על קלי קלוח <ChevronLeft size={15} />
           </button>
           <div className="profile">
             <span className="profile-avatar">
@@ -1375,7 +1375,7 @@ function App({ classroom, onLogout }) {
             המרחב שלי <ChevronLeft size={13} />{" "}
             <strong>
               {remote
-                ? "קלי קלות · השלט שלי"
+                ? "קלי קלוח · השלט שלי"
                 : nav.find((n) => n[0] === page)?.[2]}
             </strong>
           </div>
@@ -1395,7 +1395,7 @@ function App({ classroom, onLogout }) {
               className="demo-badge"
               onClick={() => setModal({ type: "about" })}
             >
-              {state.demo ? "כיתת דמה · נתוני הדגמה" : "קלי קלות · מרחב הכיתה"}
+              {state.demo ? "כיתת דמה · נתוני הדגמה" : "קלי קלוח · מרחב הכיתה"}
             </button>
             <IconButton
               icon={Bell}
@@ -2046,7 +2046,7 @@ function App({ classroom, onLogout }) {
         <Modal
           title={
             {
-              about: "נעים להכיר, קלי קלות",
+              about: "נעים להכיר, קלי קלוח",
               connect: "השלט שלך, קרוב אלייך",
               notifications: "מרחב שקט להוראה",
               students: "רגע של עידוד",

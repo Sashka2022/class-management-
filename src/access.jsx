@@ -96,7 +96,7 @@ export function Login({ onLogin, requestedClass, admin = false, onPair }) {
       <section className="login-form-area">
         <form onSubmit={submit} className="login-card">
           <span className="eyebrow">טוב שאתם כאן</span>
-          <h2>ברוכים הבאים לקלי קלות</h2>
+          <h2>ברוכים הבאים לקלי קלוח</h2>
           <p className="muted">בחרו איך להיכנס למרחב שלכם.</p>
           <div className="role-switch" aria-label="סוג כניסה">
             {[
