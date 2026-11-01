@@ -74,7 +74,8 @@ import { MediaFrame, MediaPicker, StatusBoard } from "./content";
 import { Login, Admin } from "./access";
 import { PartnerLogos } from "./PartnerLogos";
 import { Mascot, MascotParade, groupCharacters } from "./Mascot";
-import { Brand, BrandMark } from "./Brand";
+import { Brand } from "./Brand";
+import { ProjectionHud } from "./ProjectionHud";
 import { prepareFeedbackSound } from "./feedbackSound";
 import {
   LEGACY_KEY,
@@ -283,6 +284,10 @@ function publish(s, key = PUBLIC) {
     slide: s.slide,
     timer: s.timer,
     stage: { name: s.stages[s.stage].name },
+    stageIndex: s.stage,
+    stages: s.stages.map(({ id, name, minutes }) => ({ id, name, minutes })),
+    started: s.started,
+    endedAt: s.endedAt,
     ended: s.ended,
     video: s.video,
     classMode: s.classMode,
@@ -616,13 +621,11 @@ function Projector({ classId }) {
     <main className="projector-page">
       {data ? (
         <>
-          <div className="projection-top">
-            <span>
-              <BrandMark /> קלי קלוח
-            </span>
-            <span>{data.ended ? "להתראות בשיעור הבא" : data.stage.name}</span>
-            <span className="mono">{clock(seconds(data.timer))}</span>
-          </div>
+          <ProjectionHud
+            data={data}
+            now={now}
+            remaining={seconds(data.timer)}
+          />
           <div className="projector-scene">
             <MascotParade
               className="projector-character-rail projector-character-rail-start"
@@ -637,7 +640,6 @@ function Projector({ classId }) {
             >
               <ProjectedContent data={data} />
               {data.video && <MediaFrame media={data.video} />}
-              {!data.ended && <ClassModeBadge mode={data.classMode} />}
             </div>
             <MascotParade
               className="projector-character-rail projector-character-rail-end"

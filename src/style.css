@@ -5416,3 +5416,338 @@ select {
   background: #fff2dc;
   color: #754b1c;
 }
+
+/* A persistent projection header keeps classroom context outside the content. */
+.projector-page {
+  padding: 14px 20px;
+  gap: 10px;
+}
+.projector-hud {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.8fr) minmax(260px, 1.25fr) minmax(220px, 1fr);
+  gap: 12px;
+  align-items: stretch;
+  flex-shrink: 0;
+  width: 100%;
+}
+.projection-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--brand-blue-dark);
+  font-size: clamp(20px, 2vw, 28px);
+  min-width: 0;
+}
+.projection-brand .app-logo {
+  width: 52px;
+  height: 52px;
+}
+.projection-clocks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
+  gap: 10px;
+  background: #ffffffb8;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 12px;
+  text-align: center;
+}
+.projection-clocks > div {
+  min-width: 0;
+}
+.projection-clocks small {
+  display: block;
+  font-size: 12px;
+  color: #52617a;
+  margin-bottom: 3px;
+}
+.projection-clocks .mono {
+  display: block;
+  font-size: clamp(23px, 2.5vw, 34px);
+  line-height: 1.1;
+  color: #243e73;
+  direction: ltr;
+  white-space: nowrap;
+}
+.projection-clocks .projection-timer-ended {
+  color: #a34e26;
+}
+.projection-mode {
+  min-width: 0;
+  display: flex;
+}
+.projector-hud .class-mode-badge,
+.projection-mode-placeholder {
+  width: 100%;
+  min-height: 62px;
+  border-radius: 12px;
+  padding: 8px 12px;
+  flex-direction: row;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+}
+.projector-hud .class-mode-badge > small {
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.projector-hud .class-mode-badge > span {
+  font-size: 32px;
+}
+.projector-hud .class-mode-badge > h2 {
+  width: auto;
+  flex: 1;
+  flex-shrink: 1;
+  font-size: clamp(17px, 1.7vw, 24px);
+  line-height: 1.3;
+  max-width: 100%;
+  min-width: 0;
+}
+.projection-mode-placeholder {
+  display: flex;
+  background: var(--brand-teal-soft);
+  border: 1px solid #c9e2db;
+  color: #245e61;
+}
+.projection-mode-placeholder strong {
+  font-size: 18px;
+}
+.projector-lesson-plan {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  flex-shrink: 0;
+  min-width: 0;
+  width: 100%;
+}
+.projection-plan-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #344e76;
+}
+.projector-lesson-plan ol {
+  display: flex;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 2px 0;
+  min-width: 0;
+  max-height: 110px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.projector-lesson-plan li {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex: 1 0 0;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid #d6dfef;
+  border-radius: 10px;
+  background: #ffffffb8;
+  color: #455770;
+  font-size: clamp(12px, 1.2vw, 17px);
+  line-height: 1.4;
+}
+.projector-lesson-plan li > span:nth-child(2) {
+  overflow-wrap: anywhere;
+}
+.projector-lesson-plan li > span:first-child {
+  flex-shrink: 0;
+  font-weight: 700;
+}
+.projector-lesson-plan li[aria-current="step"] {
+  color: #fff;
+  background: var(--brand-blue);
+  border-color: var(--brand-blue);
+  font-weight: 700;
+}
+.projector-lesson-plan li.completed {
+  background: #e2f2e9;
+  color: #34614e;
+}
+.projector-lesson-plan li small {
+  font-size: 11px;
+  white-space: nowrap;
+}
+@media (max-width: 900px) {
+  .projector-page {
+    padding: 10px;
+    gap: 8px;
+  }
+  .projector-hud {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 7px;
+  }
+  .projection-brand strong {
+    display: none;
+  }
+  .projection-brand .app-logo {
+    width: 42px;
+    height: 42px;
+  }
+  .projection-mode {
+    grid-column: 1 / -1;
+  }
+  .projector-hud .class-mode-badge,
+  .projection-mode-placeholder {
+    min-height: 44px;
+    padding: 6px 10px;
+  }
+  .projector-hud .class-mode-badge > span {
+    font-size: 26px;
+  }
+  .projection-clocks {
+    padding: 6px 8px;
+    gap: 6px;
+  }
+  .projection-clocks .mono {
+    font-size: 22px;
+  }
+  .projection-clocks small {
+    font-size: 10px;
+  }
+  .projection-plan-label {
+    font-size: 12px;
+    max-width: 55px;
+  }
+  .projector-lesson-plan {
+    gap: 7px;
+  }
+  .projector-lesson-plan li {
+    flex: 0 0 auto;
+    min-width: 120px;
+    max-width: 210px;
+    font-size: 13px;
+    padding: 7px;
+  }
+}
+/* Scale built-in slide text to the space left by additional content windows. */
+.projector-page .slide {
+  container-type: inline-size;
+}
+.projector-page .slide h2 {
+  font-size: clamp(22px, 5.6cqw, 78px);
+  line-height: 1.25;
+}
+.projector-page .slide p {
+  font-size: clamp(14px, 2.25cqw, 30px);
+}
+.projector-page .slide-tag,
+.projector-page .slide-items,
+.projector-page .slide-footer {
+  font-size: clamp(10px, 1.2cqw, 16px);
+}
+@media (max-height: 600px) and (orientation: landscape) {
+  .projector-page {
+    padding: 8px;
+    gap: 6px;
+  }
+  .projector-hud {
+    grid-template-columns: 40px minmax(190px, 1fr) minmax(200px, 1fr);
+    gap: 7px;
+  }
+  .projection-brand strong {
+    display: none;
+  }
+  .projection-brand .app-logo {
+    width: 38px;
+    height: 38px;
+  }
+  .projection-mode {
+    grid-column: auto;
+  }
+  .projector-hud .class-mode-badge,
+  .projection-mode-placeholder {
+    min-height: 42px;
+    padding: 5px 8px;
+  }
+  .projector-hud .class-mode-badge > small {
+    display: none;
+  }
+  .projector-hud .class-mode-badge > span {
+    font-size: 24px;
+  }
+  .projector-hud .class-mode-badge > h2 {
+    font-size: 16px;
+  }
+  .projection-clocks {
+    padding: 4px 8px;
+  }
+  .projection-clocks .mono {
+    font-size: 20px;
+  }
+  .projection-clocks small {
+    font-size: 10px;
+  }
+  .projector-lesson-plan li {
+    padding: 5px 7px;
+    font-size: 12px;
+  }
+  .projector-page .class-status-board {
+    max-height: 24vh;
+    overflow-y: auto;
+    padding: 6px 10px;
+  }
+  .projector-scene {
+    grid-template-columns: 60px minmax(0, 1fr) 60px;
+    grid-template-rows: minmax(0, 1fr);
+    gap: 6px;
+  }
+  .projector-scene > .projector-content {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .projector-character-rail {
+    grid-row: 1;
+    flex-direction: column;
+    padding: 2px;
+  }
+  .projector-character-rail-start {
+    grid-column: 1;
+  }
+  .projector-character-rail-end {
+    grid-column: 3;
+  }
+  .projector-character-rail > .mascot {
+    width: 100%;
+    height: 30%;
+  }
+  .projector-page .activity {
+    padding: 10px;
+  }
+  .projector-page .activity h2 {
+    font-size: 24px;
+  }
+  .projector-page .activity > p {
+    font-size: 14px;
+    margin-top: 8px;
+  }
+  .projector-content .activity-character-row > .mascot {
+    width: 42px;
+    max-height: 36px;
+  }
+  .projector-page .slide h2 {
+    font-size: clamp(18px, 3.5cqw, 26px);
+    margin-block: 6px;
+  }
+  .projector-page .slide p {
+    font-size: clamp(12px, 1.8cqw, 15px);
+    margin-top: 6px;
+  }
+  .projector-page .slide-copy {
+    padding-block: 10px 24px;
+  }
+  .projector-page .slide-tag,
+  .projector-page .slide-items {
+    display: none;
+  }
+  .projector-page .slide-footer {
+    bottom: 4px;
+    font-size: 9px;
+  }
+}

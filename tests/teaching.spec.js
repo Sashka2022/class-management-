@@ -216,7 +216,7 @@ test("Hebrew mode labels fit every badge without splitting words, including narr
   await page.setViewportSize({ width: 1440, height: 1000 });
   const projection = await context.newPage();
   await projection.goto("/?view=projector");
-  await verify(projection, ".projector-content>.class-mode-badge");
+  await verify(projection, ".projector-hud .class-mode-badge");
   await page.getByRole("button", { name: "מצב כיתה", exact: true }).click();
   await page
     .getByLabel("כותרת מצב כיתה")
@@ -229,7 +229,7 @@ test("Hebrew mode labels fit every badge without splitting words, including narr
   await page.getByRole("button", { name: "הוספת קישור", exact: true }).click();
   await page.getByRole("button", { name: "חלון נוסף", exact: true }).click();
   await verify(page, ".slide-container>.class-mode-badge");
-  await verify(projection, ".projector-content>.class-mode-badge");
+  await verify(projection, ".projector-hud .class-mode-badge");
   await page.setViewportSize({ width: 390, height: 844 });
   await verify(page, ".slide-container>.class-mode-badge");
 });
