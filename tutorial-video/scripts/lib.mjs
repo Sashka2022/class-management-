@@ -51,7 +51,7 @@ export async function click(page, loc, { pause = 700, ms = 650 } = {}) {
   return { x, y, w: b.width, h: b.height };
 }
 // Run a scene in fresh context(s); records marks (ms since each video start)
-export async function scene(browser, name, fn, { phone = false, projector = true, login = false, tries = 3 } = {}) {
+export async function scene(browser, name, fn, { phone = false, projector = true, login = false, tries = 1 } = {}) {
   let lastErr;
   for (let attempt = 1; attempt <= tries; attempt++) {
     const dir = path.resolve("raw", name);
@@ -70,7 +70,7 @@ export async function scene(browser, name, fn, { phone = false, projector = true
       ph = await phoneCtx.newPage(); meta.starts.phone = Date.now();
     }
     const vt = teacher.video().path(), vp = proj ? proj.video().path() : null, vh = ph ? ph.video().path() : null;
-    const mark = (label) => meta.marks.push({ label, t: Date.now() });
+    const mark = (label) => { console.log("mark", label); meta.marks.push({ label, t: Date.now() }); };
     try {
       await fn({ teacher, proj, ph, ctx, mark });
       await sleep(600);
@@ -83,6 +83,7 @@ export async function scene(browser, name, fn, { phone = false, projector = true
       return meta;
     } catch (e) {
       lastErr = e; console.log("FAIL scene", name, "attempt", attempt, String(e).slice(0, 300));
+      try { await teacher.screenshot({path:`work/fail-${name}-t.png`}); if(ph) await ph.screenshot({path:`work/fail-${name}-p.png`}); } catch {}
       try { await ctx.close(); if (phoneCtx) await phoneCtx.close(); } catch {}
     }
   }
