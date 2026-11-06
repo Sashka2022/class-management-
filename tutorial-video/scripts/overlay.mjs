@@ -2,10 +2,11 @@ import { launch } from "./lib.mjs";
 import fs from "node:fs";
 import path from "node:path";
 const W = path.resolve("work");
+const f64 = (w) => "data:font/woff2;base64," + fs.readFileSync(`${W}/heebo-hebrew-${w}-normal.woff2`).toString("base64");
 export const CSS = `
-@font-face{font-family:H;font-weight:400;src:url(file://${W}/heebo-hebrew-400-normal.woff2)}
-@font-face{font-family:H;font-weight:700;src:url(file://${W}/heebo-hebrew-700-normal.woff2)}
-@font-face{font-family:H;font-weight:800;src:url(file://${W}/heebo-hebrew-800-normal.woff2)}
+@font-face{font-family:H;font-weight:400;src:url(${f64(400)})}
+@font-face{font-family:H;font-weight:700;src:url(${f64(700)})}
+@font-face{font-family:H;font-weight:800;src:url(${f64(800)})}
 *{box-sizing:border-box;margin:0}html{direction:rtl}
 body{font-family:H,sans-serif;width:var(--w);height:var(--h);overflow:hidden;position:relative;color:#fff}
 `;

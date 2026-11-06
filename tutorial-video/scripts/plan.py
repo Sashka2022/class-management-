@@ -5,6 +5,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(ROOT)
 W = os.path.join(ROOT, "work")
 FPS = 30
+import base64
+LOGO = "data:image/webp;base64," + base64.b64encode(open(os.path.join(W, "logo.webp"), "rb").read()).decode()
 BLUE, DARK, TEAL, NAVY = "#456cc3", "#315298", "#087e82", "#1d2b4f"
 
 def meta(s):
@@ -78,12 +80,12 @@ def build_shots():
                  ("proj", mark(Ha, "split") - 1.5, FULL, FULL)],
          labels=["מסך המורה", "מסך ההקרנה"],
          caps=[(0.2, 6.0, "מפעילות את כובעי החשיבה ומחלקות אותם אוטומטית —"), (6.1, 13.3, "וההקרנה מציגה לכל קבוצה את הכובע ואת הדרך לחשוב עכשיו.")])
-    shot(id="phone", scene="phone", layout="triple", title="7 · שליטה מהנייד", dur=18.6, speed=1.0,
-         panels=[("teacher", mark(Ph, "code") - 1.0, (960, 540, 1500, 840), (960, 540, 1500, 840)),
-                 ("phone", mark(Ph, "code") - 1.0, (270, 400, 540, 740), (270, 400, 540, 740)),
-                 ("proj", mark(Ph, "code") - 1.0, FULL, FULL)],
+    shot(id="phone", scene="phone", layout="triple", title="7 · שליטה מהנייד", dur=16.0, speed=1.0,
+         panels=[("teacher", mark(Ph, "code") + 1.8, (960, 540, 1500, 840), (960, 540, 1500, 840)),
+                 ("phone", mark(Ph, "code") + 1.8, (270, 400, 540, 740), (270, 400, 540, 740)),
+                 ("proj", mark(Ph, "code") + 1.8, FULL, FULL)],
          labels=["מחשב המורה", "הנייד", "מסך ההקרנה"],
-         caps=[(0.2, 6.0, "מחברות את הנייד בקוד חיבור חד־פעמי."), (6.1, 12.0, "מהנייד לוחצות ״הבא״ —"), (12.1, 17.8, "והשקף עובר בהקרנה, בזמן אמת.")])
+         caps=[(0.2, 6.5, "מחברות את הנייד בקוד חיבור חד־פעמי."), (6.6, 10.4, "מהנייד לוחצות ״הבא״ —"), (10.5, 15.8, "והשקף עובר בהקרנה, בזמן אמת.")])
     shot(id="phone-fix", skip=True)
     shot(kind="card", id="outro", dur=6.5,
          caps=[(0.3, 6.2, "קלי קלוח — פחות ניהול, יותר תלמידים.")])
@@ -91,7 +93,7 @@ def build_shots():
 
 # ---- overlay html --------------------------------------------------------
 def logo_html(L):
-    return f'<div style="position:absolute;left:{L["logo"]["left"]}px;top:{L["logo"]["top"]}px;display:flex;align-items:center;gap:14px;direction:rtl"><img src="file://{W}/logo.webp" style="width:78px;height:78px;border-radius:50%"><div style="color:{DARK};font-weight:800;font-size:40px">קלי קלוח</div></div>'
+    return f'<div style="position:absolute;left:{L["logo"]["left"]}px;top:{L["logo"]["top"]}px;display:flex;align-items:center;gap:14px;direction:rtl"><img src="{LOGO}" style="width:78px;height:78px;border-radius:50%"><div style="color:{DARK};font-weight:800;font-size:40px">קלי קלוח</div></div>'
 
 def chrome(L, s):
     lay = L[s["layout"]]
@@ -120,7 +122,7 @@ def card_html(L, s):
     vert = w < h
     return dict(bg=f"linear-gradient(160deg,#315298,#456cc3 60%,#087e82)", html=f'''
 <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:{40 if not vert else 60}px;text-align:center">
- <img src="file://{W}/logo.webp" style="width:{210 if not vert else 300}px;height:auto;border-radius:50%;box-shadow:0 12px 40px rgba(0,0,0,.3)">
+ <img src="{LOGO}" style="width:{210 if not vert else 300}px;height:auto;border-radius:50%;box-shadow:0 12px 40px rgba(0,0,0,.3)">
  <div style="font-weight:800;font-size:{64 if not vert else 76}px;color:#fff;padding:0 60px">{big}</div>
  <div style="font-weight:800;font-size:{84 if not vert else 96}px;color:#ffd978">{sub}</div>
  <div style="font-weight:400;font-size:34px;color:#dbe6ff;margin-top:20px">קלי קלוח · מרחב למחשבות ולמידה</div>
