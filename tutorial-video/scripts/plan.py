@@ -19,15 +19,17 @@ def mark(m, label):
 LAY = {
  "land": dict(w=1920, h=1080,
    single=[dict(x=80, y=150, w=1760, h=700)],
-   split=[dict(x=980, y=150, w=910, h=600), dict(x=30, y=150, w=910, h=600)],   # teacher(right), proj(left)
-   triple=[dict(x=1130, y=150, w=760, h=600), dict(x=510, y=150, w=580, h=600), dict(x=30, y=150, w=440, h=600)],
-   cap=dict(x=80, y=870, w=1760, h=150, fs=46),
+   split=[dict(x=980, y=190, w=910, h=512), dict(x=30, y=190, w=910, h=512)],   # teacher(right), proj(left)
+   triple=[dict(x=1190, y=140, w=700, h=394), dict(x=770, y=140, w=380, h=814), dict(x=1190, y=560, w=700, h=394)],
+   cap_triple=dict(x=30, y=140, w=710, h=814, fs=50),
+   cap=dict(x=80, y=820, w=1760, h=190, fs=52),
    title=dict(top=34, right=60, fs=40), logo=dict(left=60, top=26)),
  "vert": dict(w=1080, h=1920,
    single=[dict(x=20, y=250, w=1040, h=1000)],
-   split=[dict(x=20, y=250, w=1040, h=620), dict(x=20, y=890, w=1040, h=620)],
-   triple=[dict(x=20, y=250, w=520, h=640), dict(x=560, y=250, w=500, h=640), dict(x=20, y=910, w=1040, h=600)],
-   cap=dict(x=40, y=1580, w=1000, h=250, fs=56),
+   split=[dict(x=20, y=250, w=1040, h=585), dict(x=20, y=860, w=1040, h=585)],
+   triple=[dict(x=440, y=250, w=620, h=349), dict(x=20, y=250, w=400, h=800), dict(x=440, y=630, w=620, h=349)],
+   cap_triple=dict(x=40, y=1160, w=1000, h=300, fs=56),
+   cap=dict(x=40, y=1540, w=1000, h=270, fs=58),
    title=dict(top=120, right=40, fs=44), logo=dict(left=40, top=26)),
 }
 
@@ -42,7 +44,7 @@ def build_shots():
     shot(kind="card", id="intro", dur=6.0,
          caps=[(0.3, 5.8, "פחות זמן בניהול הטכני של השיעור. יותר זמן עם התלמידים.")])
     shot(id="login", scene="login", layout="single", title="1 · כניסה לכיתה", dur=7.0, speed=1.0,
-         panels=[("teacher", mark(L, "login-screen") + 4.4, (960, 540, 1920, 800), (700, 520, 1450, 640))],
+         panels=[("teacher", mark(L, "login-screen") + 4.4, (960, 520, 1920, 780), (960, 520, 1920, 780))],
          labels=["מסך המורה"],
          caps=[(0.2, 6.8, "נכנסות לכיתה עם סיסמה, ובלחיצה אחת מגיעות לממשק המורה.")])
     shot(id="open", scene="login", layout="split", title="1 · פתיחת השיעור וההקרנה", dur=8.0, speed=1.0,
@@ -61,8 +63,8 @@ def build_shots():
          labels=["מסך המורה", "מסך ההקרנה"],
          caps=[(0.2, 4.6, "הקשבה, עבודה שקטה, זוגות או קבוצות —"), (4.7, 9.0, "בחירה אחת, והמסר מופיע על המסך בלי מילה.")])
     shot(id="pairs", scene="mode", layout="split", title="3 · מצב כיתה", dur=5.2, speed=1.0,
-         panels=[("teacher", mark(Mo, "pairs") - 3.4, (960, 540, 1500, 840), (960, 540, 1500, 840)),
-                 ("proj", mark(Mo, "pairs") - 3.4, FULL, FULL)],
+         panels=[("teacher", mark(Mo, "pairs") - 4.6, (960, 540, 1500, 840), (960, 540, 1500, 840)),
+                 ("proj", mark(Mo, "pairs") - 4.6, FULL, FULL)],
          labels=["מסך המורה", "מסך ההקרנה"],
          caps=[(0.2, 5.0, "ומחליפות למצב זוגות — ההקרנה מתעדכנת מיד.")])
     shot(id="hearts", scene="hearts", layout="split", title="4 · לבבות ומשוב", dur=11.0, speed=1.25,
@@ -85,7 +87,7 @@ def build_shots():
                  ("phone", mark(Ph, "code") + 1.8, (270, 400, 540, 740), (270, 400, 540, 740)),
                  ("proj", mark(Ph, "code") + 1.8, FULL, FULL)],
          labels=["מחשב המורה", "הנייד", "מסך ההקרנה"],
-         caps=[(0.2, 6.5, "מחברות את הנייד בקוד חיבור חד־פעמי."), (6.6, 10.4, "מהנייד לוחצות ״הבא״ —"), (10.5, 15.8, "והשקף עובר בהקרנה, בזמן אמת.")])
+         caps=[(0.2, 6.5, "מחברות את הנייד בקוד חיבור חד‑פעמי."), (6.6, 10.4, "מהנייד לוחצות ״הבא״ —"), (10.5, 15.8, "והשקף עובר בהקרנה, בזמן אמת.")])
     shot(id="phone-fix", skip=True)
     shot(kind="card", id="outro", dur=6.5,
          caps=[(0.3, 6.2, "קלי קלוח — פחות ניהול, יותר תלמידים.")])
@@ -109,8 +111,8 @@ def labels_overlay(L, s):
         out += f'<div style="position:absolute;left:{r["x"]+14}px;top:{r["y"]+14}px;background:rgba(29,43,79,.88);color:#fff;font-weight:700;font-size:26px;padding:6px 20px;border-radius:30px">{html.escape(lb)}</div>'
     return out
 
-def cap_html(L, text):
-    c = L["cap"]
+def cap_html(L, text, triple=False):
+    c = L["cap_triple"] if triple else L["cap"]
     return f'<div style="position:absolute;left:{c["x"]}px;top:{c["y"]}px;width:{c["w"]}px;height:{c["h"]}px;background:rgba(29,43,79,.95);border-radius:26px;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 40px;color:#fff;font-weight:700;font-size:{c["fs"]}px;line-height:1.3">{html.escape(text)}</div>'
 
 def card_html(L, s):
@@ -142,7 +144,7 @@ def prep():
             for i, (a, b, txt) in enumerate(s["caps"]):
                 cap_bottom = s.get("kind") == "card"
                 if cap_bottom: continue
-                items.append(dict(file=f"{base}-cap{i}.png", w=L["w"], h=L["h"], html=cap_html(L, txt)))
+                items.append(dict(file=f"{base}-cap{i}.png", w=L["w"], h=L["h"], html=cap_html(L, txt, s.get("layout") == "triple")))
     json.dump(items, open("work/items.json", "w"), ensure_ascii=False)
     print(len(items), "overlays")
 
