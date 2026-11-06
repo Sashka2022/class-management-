@@ -18,7 +18,7 @@ def mark(m, label):
 # ---- layouts -------------------------------------------------------------
 LAY = {
  "land": dict(w=1920, h=1080,
-   single=[dict(x=80, y=150, w=1760, h=700)],
+   single=[dict(x=80, y=150, w=1760, h=640)],
    split=[dict(x=980, y=190, w=910, h=512), dict(x=30, y=190, w=910, h=512)],   # teacher(right), proj(left)
    triple=[dict(x=1190, y=140, w=700, h=394), dict(x=770, y=140, w=380, h=814), dict(x=1190, y=560, w=700, h=394)],
    cap_triple=dict(x=30, y=140, w=710, h=814, fs=50),
@@ -44,7 +44,7 @@ def build_shots():
     shot(kind="card", id="intro", dur=6.0,
          caps=[(0.3, 5.8, "פחות זמן בניהול הטכני של השיעור. יותר זמן עם התלמידים.")])
     shot(id="login", scene="login", layout="single", title="1 · כניסה לכיתה", dur=7.0, speed=1.0,
-         panels=[("teacher", mark(L, "login-screen") + 4.4, (960, 520, 1920, 780), (960, 520, 1920, 780))],
+         panels=[("teacher", mark(L, "login-screen") + 4.4, (640, 520, 1100, 780), (640, 520, 1100, 780))],
          labels=["מסך המורה"],
          caps=[(0.2, 6.8, "נכנסות לכיתה עם סיסמה, ובלחיצה אחת מגיעות לממשק המורה.")])
     shot(id="open", scene="login", layout="split", title="1 · פתיחת השיעור וההקרנה", dur=8.0, speed=1.0,
@@ -68,8 +68,8 @@ def build_shots():
          labels=["מסך המורה", "מסך ההקרנה"],
          caps=[(0.2, 5.0, "ומחליפות למצב זוגות — ההקרנה מתעדכנת מיד.")])
     shot(id="hearts", scene="hearts", layout="split", title="4 · לבבות ומשוב", dur=11.0, speed=1.25,
-         panels=[("teacher", mark(He, "students") + 0.8, (1000, 760, 1500, 700), (1000, 860, 1300, 520)),
-                 ("proj", mark(He, "students") + 0.8, (960, 700, 1920, 760), (960, 880, 1700, 420))],
+         panels=[("teacher", mark(He, "students") + 0.8, (1300, 900, 900, 506), (1300, 900, 800, 450)),
+                 ("proj", mark(He, "students") + 0.8, (1500, 900, 900, 506), (1500, 900, 800, 450))],
          labels=["מסך המורה", "מסך ההקרנה"],
          caps=[(0.2, 5.4, "נותנות לב לתלמידה או לתלמיד על מאמץ ושיתוף פעולה —"), (5.5, 10.8, "והלב נרשם ומופיע גם בהקרנה.")])
     shot(id="groups", scene="groups", layout="split", title="5 · קבוצות ותפקידים", dur=14.0, speed=1.25,
