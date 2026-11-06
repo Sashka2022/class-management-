@@ -68,8 +68,8 @@ def build_shots():
          labels=["מסך המורה", "מסך ההקרנה"],
          caps=[(0.2, 5.0, "ומחליפות למצב זוגות — ההקרנה מתעדכנת מיד.")])
     shot(id="hearts", scene="hearts", layout="split", title="4 · לבבות ומשוב", dur=11.0, speed=1.25,
-         panels=[("teacher", mark(He, "students") + 0.8, (1300, 900, 900, 506), (1300, 900, 800, 450)),
-                 ("proj", mark(He, "students") + 0.8, (1500, 900, 900, 506), (1500, 900, 800, 450))],
+         panels=[("teacher", mark(He, "students") + 0.8, (1330, 880, 560, 315), (1330, 880, 560, 315)),
+                 ("proj", mark(He, "students") + 0.8, (1700, 900, 520, 292), (1700, 900, 520, 292))],
          labels=["מסך המורה", "מסך ההקרנה"],
          caps=[(0.2, 5.4, "נותנות לב לתלמידה או לתלמיד על מאמץ ושיתוף פעולה —"), (5.5, 10.8, "והלב נרשם ומופיע גם בהקרנה.")])
     shot(id="groups", scene="groups", layout="split", title="5 · קבוצות ותפקידים", dur=14.0, speed=1.25,
@@ -198,7 +198,11 @@ def make(fmt):
             filt.append(f"{chain}format=yuv420p[v]")
             cmd = ["ffmpeg", "-v", "error", "-y"] + inputs + ["-filter_complex", ";".join(filt), "-map", "[v]", "-t", str(D),
                    "-c:v", "libx264", "-crf", "17", "-preset", "fast", "-r", str(FPS), out]
-        r = subprocess.run(cmd, capture_output=True, text=True)
+        redo = os.environ.get("REDO")
+        if redo and os.path.exists(out) and s["id"] not in redo.split(","):
+            r = type("R", (), {"returncode": 0})()
+        else:
+            r = subprocess.run(cmd, capture_output=True, text=True)
         if r.returncode: print("FFMPEG FAIL", s["id"], r.stderr[-1500:]); sys.exit(1)
         for (a, b, txt) in s["caps"]:
             srt.append((T + a, T + b, txt)); narr.append(txt)
