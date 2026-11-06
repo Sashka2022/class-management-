@@ -78,10 +78,10 @@ def build_shots():
                  ("proj", mark(Ha, "split") - 1.5, FULL, FULL)],
          labels=["מסך המורה", "מסך ההקרנה"],
          caps=[(0.2, 6.0, "מפעילות את כובעי החשיבה ומחלקות אותם אוטומטית —"), (6.1, 13.3, "וההקרנה מציגה לכל קבוצה את הכובע ואת הדרך לחשוב עכשיו.")])
-    shot(id="phone", scene="phone", layout="triple", title="7 · שליטה מהנייד", dur=18.0, speed=1.0,
-         panels=[("teacher", mark(Ph, "code") - 3.0, (960, 540, 1500, 840), (960, 540, 1500, 840)),
-                 ("phone", 0, (270, 540, 540, 1080), (270, 540, 540, 1080)),
-                 ("proj", mark(Ph, "code") - 3.0, FULL, FULL)],
+    shot(id="phone", scene="phone", layout="triple", title="7 · שליטה מהנייד", dur=18.6, speed=1.0,
+         panels=[("teacher", mark(Ph, "code") - 1.0, (960, 540, 1500, 840), (960, 540, 1500, 840)),
+                 ("phone", mark(Ph, "code") - 1.0, (270, 400, 540, 740), (270, 400, 540, 740)),
+                 ("proj", mark(Ph, "code") - 1.0, FULL, FULL)],
          labels=["מחשב המורה", "הנייד", "מסך ההקרנה"],
          caps=[(0.2, 6.0, "מחברות את הנייד בקוד חיבור חד־פעמי."), (6.1, 12.0, "מהנייד לוחצות ״הבא״ —"), (12.1, 17.8, "והשקף עובר בהקרנה, בזמן אמת.")])
     shot(id="phone-fix", skip=True)
@@ -179,9 +179,7 @@ def make(fmt):
                 key, t0 = p[0], p[1]
                 src = m["files"][key]
                 off = 0.0 if key != "proj" else (m["starts"]["proj"] - m["starts"]["teacher"]) / 1000
-                start = max(0, t0 - off) if key != "phone" else max(0, t0 + (m["starts"]["teacher"] - m["starts"]["phone"]) / 1000)
-                if key == "phone":
-                    start = max(0, mark(m, "code") - 3.0 + (m["starts"]["teacher"] - m["starts"]["phone"]) / 1000) if "t_phone" not in s else s["t_phone"]
+                start = max(0, t0 - off) if key != "phone" else max(0, t0 - (m["starts"]["phone"] - m["starts"]["teacher"]) / 1000)
                 inputs += ["-ss", f"{start:.3f}", "-t", f"{D*s['speed']+0.5:.3f}", "-i", src]
                 sw, sh = (540, 1080) if key == "phone" else (1920, 1080)
                 filt.append(panel_filter(f"{idx}:v", lay[i], p, s["speed"], D, sw, sh, f"p{i}")); idx += 1
