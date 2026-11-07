@@ -3693,6 +3693,10 @@ select {
   width: 100%;
   margin-top: 16px;
 }
+.tutorial-link {
+  margin-top: 10px;
+  text-decoration: none;
+}
 .join-device {
   max-width: 500px;
   margin: 8vh auto;
