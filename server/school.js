@@ -6,6 +6,7 @@ import {
   changeControl,
   combinedStudentId,
 } from "./lessonSessions.js";
+import { validState } from "./pairing.js";
 const prefix = "{beyachad-school}:",
   registry = prefix + "classes",
   hash = (s) => createHash("sha256").update(String(s)).digest("hex");
@@ -29,6 +30,12 @@ async function catalog(store) {
 const metaKey = (id, year) => `${prefix}totals:${id}:${year}`;
 const recordKey = (id, lesson) => `${prefix}report:${id}:${lesson}`;
 const dayKey = (id, day) => `${prefix}day:${id}:${day}`;
+const planKey = (id) => `${prefix}plan:${id}`;
+const lessonKey = (id) => `${prefix}lesson:${id}`;
+// Planning data is kept across school years; everything else in a class
+// backup holds student activity and expires with the school year.
+const PLAN_FIELDS = ["customTemplates", "dayPlans", "library"];
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const emptyTotals = () => ({
   records: 0,
   completed: 0,
@@ -401,13 +408,54 @@ export function createSchoolHandler(provider) {
       }
       if (b.action === "reports") {
         const day = b.day || dayInIsrael();
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) fail(400, "תאריך לא תקין");
+        if (!DAY.test(day)) fail(400, "תאריך לא תקין");
         const selected = b.classId
           ? classroom.combined
             ? classroom.members
             : [classroom]
           : classes.filter((c) => !c.demo);
         if (user.role !== "admin" && !b.classId) fail(403, "יש לבחור כיתה");
+        if (b.to !== undefined && b.to !== day) {
+          if (!DAY.test(b.to) || b.to < day) fail(400, "טווח תאריכים לא תקין");
+          // The yearly totals already index every lesson of a class by its
+          // end time, so a range needs no per-day lookups.
+          const years = [
+            ...new Set([
+              schoolYear(Date.parse(`${day}T12:00:00+02:00`)).id,
+              schoolYear(Date.parse(`${b.to}T12:00:00+02:00`)).id,
+            ]),
+          ];
+          const pairs = selected.flatMap((c) =>
+            years.map((year) => ({ c, key: metaKey(c.id, year) })),
+          );
+          const metas = await store.many(pairs.map((p) => p.key));
+          const keys = pairs.flatMap(({ c }, i) =>
+            Object.entries(
+              metas[i] ? JSON.parse(metas[i]).attendance || {} : {},
+            )
+              .filter(([, entry]) => {
+                const d = dayInIsrael(entry.endedAt);
+                return d >= day && d <= b.to;
+              })
+              .map(([id]) => recordKey(c.id, id)),
+          );
+          if (keys.length > 600)
+            fail(
+              400,
+              "הטווח כולל יותר מ־600 סיכומים. בחרו טווח קצר יותר או כיתה אחת.",
+            );
+          const raw = [];
+          for (let i = 0; i < keys.length; i += 150)
+            raw.push(...(await store.many(keys.slice(i, i + 150))));
+          const records = raw
+            .filter(Boolean)
+            .map(JSON.parse)
+            .filter((r) => r.expiresAt > Date.now())
+            .sort((a, b) => a.endedAt - b.endedAt);
+          return res
+            .status(200)
+            .json({ records, policy: schoolYear(), day, to: b.to });
+        }
         const ids = await Promise.all(
           selected.map((c) => store.list(dayKey(c.id, day))),
         );
@@ -427,6 +475,58 @@ export function createSchoolHandler(provider) {
         const raw = await store.get(recordKey(b.classId, b.id));
         if (raw) await changeReport(store, JSON.parse(raw), true);
         return res.status(200).json({ deleted: true });
+      }
+      if (b.action === "backup" || b.action === "saveBackup") {
+        if (user.role !== "teacher" || classroom.demo)
+          fail(403, "גיבוי השיעור זמין למורה של הכיתה בלבד.");
+        const pk = planKey(b.classId),
+          lk = lessonKey(b.classId);
+        if (b.action === "backup") {
+          const [planRaw, lessonRaw] = await store.many([pk, lk]);
+          if (!planRaw) return res.status(200).json({ backup: null });
+          const saved = JSON.parse(planRaw);
+          return res.status(200).json({
+            backup: {
+              plan: saved.plan,
+              state: lessonRaw ? JSON.parse(lessonRaw) : null,
+              revisedAt: saved.revisedAt,
+              savedAt: saved.savedAt,
+            },
+          });
+        }
+        await changeControl(store, user, "renew");
+        if (!validState(b.state) || JSON.stringify(b.state).length > 1000000)
+          fail(400, "נתוני השיעור אינם תקינים או גדולים מדי לגיבוי.");
+        const plan = {},
+          lesson = {};
+        for (const [key, value] of Object.entries(b.state))
+          (PLAN_FIELDS.includes(key) ? plan : lesson)[key] = value;
+        const savedAt = Date.now(),
+          revisedAt = Number.isFinite(b.state.revisedAt)
+            ? b.state.revisedAt
+            : 0,
+          next = JSON.stringify({ plan, revisedAt, savedAt });
+        for (let attempt = 0; attempt < 5; attempt++) {
+          await store.create(pk, JSON.stringify({ plan: {}, revisedAt: 0 }), 0);
+          const raw = await store.get(pk);
+          if (
+            await store.atomic({
+              key: pk,
+              expected: raw,
+              next,
+              ttl: 0,
+              writes: [
+                {
+                  key: lk,
+                  value: JSON.stringify(lesson),
+                  ttl: ttlFor(schoolYear().expiresAt),
+                },
+              ],
+            })
+          )
+            return res.status(200).json({ saved: true, savedAt, revisedAt });
+        }
+        fail(409, "גיבוי מקביל. נסו שוב.");
       }
       if (b.action === "roster") {
         if (user.role === "teacher") await changeControl(store, user, "renew");

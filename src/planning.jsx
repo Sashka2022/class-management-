@@ -1,5 +1,13 @@
 import React, { useState } from "react";
-import { Plus, Trash2, Copy, Save } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Copy,
+  CopyPlus,
+  Save,
+  ArrowUp,
+  ArrowDown,
+} from "lucide-react";
 export function stagesFor(template) {
   return structuredClone(template.stages).map((stage) => ({
     ...stage,
@@ -136,6 +144,14 @@ export function Templates({ state, onUse, update }) {
       list.map((s, i) => (i === index ? { ...s, [key]: value } : s)),
     );
   }
+  function move(from, to) {
+    setStages((list) => {
+      const next = [...list];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  }
   function save(e) {
     e.preventDefault();
     if (
@@ -223,6 +239,40 @@ export function Templates({ state, onUse, update }) {
                     onChange={(e) => field(i, "equipment", e.target.value)}
                   />
                 </label>
+                <div className="stage-tools" role="group">
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={i === 0}
+                    aria-label={`הקדמת שלב ${i + 1} בתבנית`}
+                    onClick={() => move(i, i - 1)}
+                  >
+                    <ArrowUp size={15} /> הקדמה
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={i === stages.length - 1}
+                    aria-label={`דחיית שלב ${i + 1} בתבנית`}
+                    onClick={() => move(i, i + 1)}
+                  >
+                    <ArrowDown size={15} /> דחייה
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    aria-label={`שכפול שלב ${i + 1} בתבנית`}
+                    onClick={() =>
+                      setStages((list) => [
+                        ...list.slice(0, i + 1),
+                        { ...s, id: crypto.randomUUID() },
+                        ...list.slice(i + 1),
+                      ])
+                    }
+                  >
+                    <Copy size={15} /> שכפול
+                  </button>
+                </div>
                 <button
                   type="button"
                   className="text-button danger"
@@ -301,6 +351,29 @@ export function Templates({ state, onUse, update }) {
               }}
             >
               עריכת תבנית {t.name}
+            </button>
+            <button
+              className="secondary"
+              onClick={() =>
+                update((s) => {
+                  const list = s.customTemplates || [],
+                    at = list.findIndex((x) => x.id === t.id);
+                  if (at === -1) return;
+                  const taken = new Set(list.map((x) => x.name));
+                  let copyName = `${t.name} (עותק)`;
+                  for (let n = 2; taken.has(copyName); n++)
+                    copyName = `${t.name} (עותק ${n})`;
+                  list.splice(at + 1, 0, {
+                    ...structuredClone(list[at]),
+                    id: crypto.randomUUID(),
+                    name: copyName,
+                    stages: stagesFor(list[at]),
+                  });
+                  s.customTemplates = list;
+                }, "התבנית שוכפלה. אפשר לערוך את העותק")
+              }
+            >
+              <CopyPlus size={15} /> שכפול תבנית {t.name}
             </button>
             <button
               className="text-button danger"

@@ -24,6 +24,8 @@ import {
   Clock3,
   MoreHorizontal,
   ArrowLeft,
+  ArrowUp,
+  ArrowDown,
   Undo2,
   Search,
   Shuffle,
@@ -47,6 +49,8 @@ import "./style.css";
 import {
   useCloudArchive,
   ArchiveStatus,
+  useCloudBackup,
+  BackupStatus,
   ReportPanel,
   session as schoolSession,
   schoolRequest,
@@ -303,6 +307,34 @@ function publish(s, key = PUBLIC) {
     ),
   };
   localStorage.setItem(key, JSON.stringify(data));
+}
+// The current stage is tracked by position, so every change to the order
+// has to keep pointing at the same stage.
+function moveStage(s, from, to) {
+  if (from === to || !s.stages[from] || !s.stages[to]) return;
+  const current = s.stages[s.stage];
+  const [moved] = s.stages.splice(from, 1);
+  s.stages.splice(to, 0, moved);
+  s.stage = s.stages.indexOf(current);
+}
+function duplicateStage(s, index) {
+  const source = s.stages[index];
+  if (!source) return;
+  s.stages.splice(index + 1, 0, {
+    ...structuredClone(source),
+    id: crypto.randomUUID(),
+    name: `${source.name} (עותק)`,
+  });
+  if (index < s.stage) s.stage++;
+}
+function removeStage(s, index) {
+  if (s.stages.length < 2 || !s.stages[index]) return;
+  s.stages.splice(index, 1);
+  if (index < s.stage) s.stage--;
+  else if (index === s.stage) {
+    s.stage = Math.min(index, s.stages.length - 1);
+    s.timer = { remaining: s.stages[s.stage].minutes * 60, end: null };
+  }
 }
 function rememberMedia(s, media) {
   const list = s.library || [];
@@ -688,6 +720,8 @@ function App({ classroom, onLogout }) {
     [groupCount, setGroupCount] = useState(4),
     [rosterText, setRosterText] = useState(""),
     [phaseForm, setPhaseForm] = useState(null),
+    [dragStage, setDragStage] = useState(null),
+    [dropStage, setDropStage] = useState(null),
     [summary, setSummary] = useState("");
   function applyPaired(next) {
     localStorage.setItem(KEY, JSON.stringify(next));
@@ -695,6 +729,7 @@ function App({ classroom, onLogout }) {
     setState(next);
   }
   const pair = usePairing(classroom, state, applyPaired);
+  const hadLocal = useRef(localStorage.getItem(KEY) !== null);
   const signedIn = schoolSession();
   const needsControl = !!signedIn.leaseId && !classroom.demo;
   const [controlError, setControlError] = useState("");
@@ -720,6 +755,40 @@ function App({ classroom, onLogout }) {
       applyPaired(next);
     },
   });
+  const backup = useCloudBackup({
+    classroom,
+    state,
+    restore: (saved) => {
+      const local = readCurrent();
+      // A running shared lesson is the source of truth, and a device that
+      // already holds newer work keeps it.
+      if (
+        pair.connection ||
+        (hadLocal.current && (saved.revisedAt || 0) <= (local.revisedAt || 0))
+      )
+        return local;
+      const next = { ...(saved.state || local), ...saved.plan };
+      if (saved.state && local.students.length) {
+        // The class list has its own cloud copy; only lesson marks are taken
+        // from the backup.
+        const marks = new Map(
+          (saved.state.students || []).map((p) => [p.id, p]),
+        );
+        next.students = local.students.map((p) => ({
+          ...p,
+          ...marks.get(p.id),
+          name: p.name,
+          emoji: p.emoji,
+        }));
+      }
+      localStorage.setItem(KEY, JSON.stringify(next));
+      const restored = readCurrent();
+      applyPaired(restored);
+      hadLocal.current = true;
+      setToast({ message: "השיעור, התבניות והתכנון שוחזרו מהגיבוי בענן." });
+      return restored;
+    },
+  });
   useEffect(() => {
     if (!needsControl) return;
     let stopped = false;
@@ -739,7 +808,8 @@ function App({ classroom, onLogout }) {
     };
   }, [signedIn.authToken, needsControl]);
   useEffect(() => {
-    if (!needsControl || !cloud.ready || pair.connection) return;
+    if (!needsControl || !cloud.ready || !backup.ready || pair.connection)
+      return;
     const connect = async () => {
       if (connecting.current) return;
       connecting.current = true;
@@ -752,7 +822,7 @@ function App({ classroom, onLogout }) {
     connect();
     const timer = setInterval(connect, 10000);
     return () => clearInterval(timer);
-  }, [needsControl, cloud.ready, pair.connection?.id]);
+  }, [needsControl, cloud.ready, backup.ready, pair.connection?.id]);
   useEffect(() => {
     if (!needsControl) {
       publish(state, PUBLIC);
@@ -773,13 +843,17 @@ function App({ classroom, onLogout }) {
     const t = setTimeout(() => setToast(null), 6500);
     return () => clearTimeout(t);
   }, [toast]);
-  function update(fn, message, undo = false) {
+  function update(change, message, undo = false) {
     if (needsControl && !pair.connection) {
       setToast({
         message: "מחברים את השיעור המאובטח לכיתות. המתינו רגע ונסו שוב.",
       });
       return Promise.resolve(null);
     }
+    const fn = (s) => {
+      change(s);
+      s.revisedAt = Date.now();
+    };
     if (pair.connection) {
       return pair
         .mutate(fn)
@@ -1512,17 +1586,23 @@ function App({ classroom, onLogout }) {
         </header>
         <main
           className="workspace"
-          aria-busy={!cloud.ready || (needsControl && !pair.connection)}
+          aria-busy={
+            !cloud.ready || !backup.ready || (needsControl && !pair.connection)
+          }
         >
           {(!cloud.ready ||
+            !backup.ready ||
             (needsControl && !pair.connection && !pair.error)) && (
             <div className="cloud-loading" role="status">
               {!cloud.ready
                 ? "טוענים את רשימת הכיתה מהענן…"
-                : "מחברים את הכיתות לשיעור המשותף…"}
+                : !backup.ready
+                  ? "בודקים גיבוי של השיעור בענן…"
+                  : "מחברים את הכיתות לשיעור המשותף…"}
             </div>
           )}
           <ArchiveStatus cloud={cloud} demo={state.demo} />
+          <BackupStatus backup={backup} />
           {(controlError || (needsControl && pair.error)) && (
             <p className="control-warning" role="alert">
               {controlError || pair.error}
@@ -1960,8 +2040,36 @@ function App({ classroom, onLogout }) {
                       <div className="timeline">
                         {state.stages.map((p, i) => (
                           <div
-                            className={`stage-item ${i === state.stage ? "current" : ""} ${i < state.stage ? "done" : ""}`}
+                            className={`stage-item ${i === state.stage ? "current" : ""} ${i < state.stage ? "done" : ""} ${dragStage === i ? "dragging" : ""} ${dropStage === i && dragStage !== null && dragStage !== i ? "drop-target" : ""}`}
                             key={p.id}
+                            draggable={state.stages.length > 1}
+                            title="אפשר לגרור כדי לשנות את סדר השלבים"
+                            onDragStart={(e) => {
+                              e.dataTransfer.effectAllowed = "move";
+                              e.dataTransfer.setData("text/plain", p.name);
+                              setDragStage(i);
+                            }}
+                            onDragOver={(e) => {
+                              if (dragStage === null) return;
+                              e.preventDefault();
+                              if (dropStage !== i) setDropStage(i);
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              const from = dragStage;
+                              setDragStage(null);
+                              setDropStage(null);
+                              if (from === null || from === i) return;
+                              update(
+                                (s) => moveStage(s, from, i),
+                                "סדר השלבים עודכן",
+                                true,
+                              );
+                            }}
+                            onDragEnd={() => {
+                              setDragStage(null);
+                              setDropStage(null);
+                            }}
                           >
                             <button
                               className="stage-main"
@@ -2154,6 +2262,18 @@ function App({ classroom, onLogout }) {
                           current.ids.push(id);
                       });
                   });
+                  // A stage reorder, copy or removal is undone only while the
+                  // lesson plan is still exactly as that action left it.
+                  if (
+                    JSON.stringify(previous.stages) !==
+                      JSON.stringify(after.stages) &&
+                    JSON.stringify(s.stages) === JSON.stringify(after.stages)
+                  ) {
+                    s.stages = previous.stages;
+                    s.stage = previous.stage;
+                    if (after.stage !== previous.stage || !s.timer.end)
+                      s.timer = previous.timer;
+                  }
                 });
                 setToast(null);
               }}
@@ -2639,6 +2759,69 @@ function App({ classroom, onLogout }) {
                 <Check size={17} />
                 שמירת השלב
               </button>
+              {phaseForm.index !== -1 && (
+                <div className="stage-tools" role="group" aria-label="סדר השלב">
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={phaseForm.index === 0}
+                    onClick={() => {
+                      const from = phaseForm.index;
+                      update(
+                        (s) => moveStage(s, from, from - 1),
+                        "השלב הוקדם",
+                        true,
+                      );
+                      setPhaseForm({ ...phaseForm, index: from - 1 });
+                    }}
+                  >
+                    <ArrowUp size={15} /> הקדמת השלב
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={phaseForm.index === state.stages.length - 1}
+                    onClick={() => {
+                      const from = phaseForm.index;
+                      update(
+                        (s) => moveStage(s, from, from + 1),
+                        "השלב נדחה",
+                        true,
+                      );
+                      setPhaseForm({ ...phaseForm, index: from + 1 });
+                    }}
+                  >
+                    <ArrowDown size={15} /> דחיית השלב
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => {
+                      const from = phaseForm.index;
+                      update(
+                        (s) => duplicateStage(s, from),
+                        "השלב שוכפל",
+                        true,
+                      );
+                      setModal(null);
+                    }}
+                  >
+                    <Copy size={15} /> שכפול השלב
+                  </button>
+                  <button
+                    type="button"
+                    className="text-button danger"
+                    disabled={state.stages.length < 2}
+                    onClick={() => {
+                      const from = phaseForm.index;
+                      update((s) => removeStage(s, from), "השלב נמחק", true);
+                      setModal(null);
+                    }}
+                  >
+                    <Trash2 size={14} /> מחיקת השלב
+                  </button>
+                </div>
+              )}
             </form>
           )}
           {modal.type === "add" && (

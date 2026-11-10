@@ -170,7 +170,7 @@ export function redisStore() {
       ])) <= max,
   };
 }
-function validState(s) {
+export function validState(s) {
   return (
     s &&
     Array.isArray(s.students) &&

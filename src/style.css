@@ -5751,3 +5751,107 @@ select {
     font-size: 9px;
   }
 }
+
+.backup-status {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 10px;
+  color: #7b8e69;
+  margin-bottom: 13px;
+}
+.backup-status button {
+  color: #8b7048;
+  text-decoration: underline;
+}
+.backup-status:has(button) {
+  font-size: 11px;
+  color: #a55f43;
+  line-height: 1.8;
+}
+.stage-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.stage-tools button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.modal-body .stage-tools {
+  border-top: 1px solid #e3e8d9;
+  padding-top: 14px;
+}
+.stage-item[draggable="true"] {
+  cursor: grab;
+}
+.stage-item.dragging {
+  opacity: 0.45;
+}
+.stage-item.drop-target {
+  box-shadow: 0 -3px 0 #7da453;
+}
+.report-print-title {
+  display: none;
+}
+@media print {
+  @page {
+    margin: 14mm;
+  }
+  body:has(.report-panel) * {
+    visibility: hidden;
+  }
+  body:has(.report-panel) .report-panel,
+  body:has(.report-panel) .report-panel * {
+    visibility: visible;
+  }
+  body:has(.report-panel) .report-panel {
+    position: absolute;
+    inset: 0 0 auto 0;
+    margin: 0;
+    border: 0;
+    box-shadow: none;
+    background: #fff;
+  }
+  .report-panel .panel-heading,
+  .report-panel .report-filters,
+  .report-panel .report-retention,
+  .report-panel .delete-report-confirm,
+  .report-panel .lesson-report button {
+    display: none;
+  }
+  .report-print-title {
+    display: block;
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 12px;
+    color: #000;
+  }
+  .report-table-scroll {
+    overflow: visible;
+  }
+  .report-table {
+    font-size: 11px;
+    color: #000;
+  }
+  .report-table th,
+  .report-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #999;
+  }
+  .report-table thead {
+    display: table-header-group;
+  }
+  .report-table tr,
+  .lesson-report header {
+    break-inside: avoid;
+  }
+  .lesson-report {
+    margin: 0 0 14px;
+    overflow: visible;
+  }
+}
