@@ -1,3 +1,7 @@
+import {
+  useProjectionDisplay,
+  ProjectionDisplayControls,
+} from "./projection-display";
 import { schoolYear } from "../shared/schoolPolicy";
 import React, { useEffect, useState, useRef } from "react";
 import { createRoot } from "react-dom/client";
@@ -625,6 +629,7 @@ function ProjectedContent({ data }) {
   );
 }
 function Projector({ classId }) {
+  const [display, changeDisplay] = useProjectionDisplay(classId);
   const PUBLIC = projectionKey(classId);
   const get = () => {
     try {
@@ -650,7 +655,9 @@ function Projector({ classId }) {
     };
   }, []);
   return (
-    <main className="projector-page">
+    <main
+      className={`projector-page readable-projection board-${display.size} ${display.focused ? "students-focused" : ""}`}
+    >
       {data ? (
         <>
           <ProjectionHud
@@ -658,27 +665,33 @@ function Projector({ classId }) {
             now={now}
             remaining={seconds(data.timer)}
           />
-          <div className="projector-scene">
-            <MascotParade
-              className="projector-character-rail projector-character-rail-start"
-              variants={
-                data.ended
-                  ? ["balloon", "sunglasses", "rest"]
-                  : ["welcome", "planning", "birds"]
-              }
-            />
-            <div
-              className={`projector-content ${data.video ? "with-video" : ""}`}
-            >
-              <ProjectedContent data={data} />
-              {data.video && <MediaFrame media={data.video} />}
+          <ProjectionDisplayControls
+            display={display}
+            onChange={changeDisplay}
+          />
+          <div className="projector-layout">
+            <div className="projector-scene">
+              <MascotParade
+                className="projector-character-rail projector-character-rail-start"
+                variants={
+                  data.ended
+                    ? ["balloon", "sunglasses", "rest"]
+                    : ["welcome", "planning", "birds"]
+                }
+              />
+              <div
+                className={`projector-content ${data.video ? "with-video" : ""}`}
+              >
+                <ProjectedContent data={data} />
+                {data.video && <MediaFrame media={data.video} />}
+              </div>
+              <MascotParade
+                className="projector-character-rail projector-character-rail-end"
+                variants={["hats", "focus", "running"]}
+              />
             </div>
-            <MascotParade
-              className="projector-character-rail projector-character-rail-end"
-              variants={["hats", "focus", "running"]}
-            />
+            <StatusBoard students={data.students} projected display={display} />
           </div>
-          <StatusBoard students={data.students} />
           {!data.ended && seconds(data.timer) === 0 && (
             <p className="time-finished">הזמן הסתיים · מחכים להנחיית המחנכת</p>
           )}
@@ -707,6 +720,7 @@ function Projector({ classId }) {
 }
 
 function App({ classroom, onLogout }) {
+  const [display, changeDisplay] = useProjectionDisplay(classroom.id);
   const KEY = classKey(classroom.id),
     PUBLIC = projectionKey(classroom.id);
   const readCurrent = () => read(KEY, classroom.id === "g2");
@@ -1918,6 +1932,10 @@ function App({ classroom, onLogout }) {
                     onHeart={heart}
                     onStudent={(id) => setModal({ type: "student", id })}
                     onWarning={warn}
+                  />
+                  <ProjectionDisplayControls
+                    display={display}
+                    onChange={changeDisplay}
                   />
                   <div className="lesson-tools-row">
                     <button

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { Heart, Flag, Upload, Link, Plus, ExternalLink } from "lucide-react";
 function db() {
   return new Promise((resolve, reject) => {
@@ -132,11 +132,64 @@ export function MediaFrame({ media }) {
     </div>
   );
 }
-export function StatusBoard({ students = [], onHeart, onWarning, onStudent }) {
+export function StatusBoard({
+  students = [],
+  onHeart,
+  onWarning,
+  onStudent,
+  projected = false,
+  display,
+}) {
+  const tiles = useRef(null);
+  const [bounds, setBounds] = useState({ width: 0, height: 0 });
+  useLayoutEffect(() => {
+    if (!projected || !tiles.current) return;
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      setBounds((old) =>
+        old.width === width && old.height === height ? old : { width, height },
+      );
+    });
+    observer.observe(tiles.current);
+    return () => observer.disconnect();
+  }, [projected]);
+  const preferredWidth = display?.focused
+    ? 260
+    : { small: 140, medium: 160, large: 180 }[display?.size || "medium"];
+  const columns = Math.max(
+    1,
+    Math.min(
+      students.length || 1,
+      Math.floor(bounds.width / preferredWidth) || 1,
+    ),
+  );
+  const rows = Math.max(1, Math.ceil(students.length / columns));
+  const cellWidth = (bounds.width - (columns - 1) * 7) / columns;
+  const cellHeight = (bounds.height - (rows - 1) * 7) / rows;
+  const baseFont = Math.max(
+    12,
+    Math.min(
+      display?.focused
+        ? 40
+        : { small: 24, medium: 28, large: 34 }[display?.size || "medium"],
+      (cellHeight - 28) / 1.25,
+    ),
+  );
+  function nameFont(name) {
+    if (!projected || !bounds.width) return undefined;
+    const canvas = document.createElement("canvas"),
+      context = canvas.getContext("2d");
+    context.font = `700 ${baseFont}px ${getComputedStyle(tiles.current).fontFamily}`;
+    const width = context.measureText(name).width;
+    return Math.min(
+      baseFont,
+      (baseFont * Math.max(1, cellWidth - 62)) / Math.max(1, width),
+    );
+  }
   const [compact, setCompact] = useState(false);
   return (
     <section
-      className={`class-status-board ${compact ? "compact" : ""}`}
+      className={`class-status-board ${compact ? "compact" : ""} ${projected ? "projected-student-board" : ""}`}
       aria-label="סטטוס כל התלמידים"
     >
       <div className="status-board-heading">
@@ -152,7 +205,20 @@ export function StatusBoard({ students = [], onHeart, onWarning, onStudent }) {
         </button>
         <span>♥ חיזוק · ⚑ אזהרה · ✓ נוכחות</span>
       </div>
-      <div className="status-tiles" style={{ "--count": students.length }}>
+      <div
+        ref={tiles}
+        className="status-tiles"
+        style={{
+          "--count": students.length,
+          ...(projected
+            ? {
+                "--board-columns": columns,
+                "--board-rows": rows,
+                "--board-font": `${baseFont}px`,
+              }
+            : {}),
+        }}
+      >
         {students.map((p) => (
           <div
             key={p.id}
@@ -165,7 +231,11 @@ export function StatusBoard({ students = [], onHeart, onWarning, onStudent }) {
               title={p.name}
             >
               <span>{p.emoji}</span>
-              <strong>{p.name}</strong>
+              <strong
+                style={projected ? { fontSize: nameFont(p.name) } : undefined}
+              >
+                {p.name}
+              </strong>
               <small
                 aria-label={`${p.name}: ${p.present ? "נוכח/ת" : "חסר/ה"}`}
               >

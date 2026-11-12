@@ -5251,7 +5251,11 @@ select {
 }
 .projector-scene {
   display: grid;
-  grid-template-columns: clamp(85px, 10vw, 170px) minmax(0, 1fr) clamp(85px, 10vw, 170px);
+  grid-template-columns: clamp(85px, 10vw, 170px) minmax(0, 1fr) clamp(
+      85px,
+      10vw,
+      170px
+    );
   grid-template-rows: minmax(0, 1fr);
   flex: 1;
   min-height: 0;
@@ -5424,7 +5428,10 @@ select {
 }
 .projector-hud {
   display: grid;
-  grid-template-columns: minmax(140px, 0.8fr) minmax(260px, 1.25fr) minmax(220px, 1fr);
+  grid-template-columns: minmax(140px, 0.8fr) minmax(260px, 1.25fr) minmax(
+      220px,
+      1fr
+    );
   gap: 12px;
   align-items: stretch;
   flex-shrink: 0;
@@ -5854,4 +5861,209 @@ select {
     margin: 0 0 14px;
     overflow: visible;
   }
+}
+
+/* Projected names use the available height alongside the lesson content. */
+.projection-display-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #f4f7ee;
+  border-radius: 10px;
+  color: #243425;
+  font-size: 12px;
+}
+.projection-display-controls label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.projection-display-controls select {
+  padding: 6px 10px;
+  border: 1px solid #a0ae96;
+  border-radius: 6px;
+  background: white;
+  color: #243425;
+  font: inherit;
+}
+.projection-display-controls .secondary {
+  padding: 8px 12px;
+}
+.readable-projection.projector-page {
+  overflow: hidden;
+}
+.readable-projection > .projection-display-controls {
+  flex-shrink: 0;
+  padding-left: 55px;
+}
+.readable-projection .projector-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 36%);
+  gap: 12px;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+}
+.readable-projection.board-small .projector-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 30%);
+}
+.readable-projection.board-large .projector-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 44%);
+}
+.readable-projection .projector-scene {
+  grid-template-columns: minmax(0, 1fr);
+  height: 100%;
+  min-width: 0;
+}
+.readable-projection .projector-scene > .projector-content {
+  grid-column: 1;
+  grid-row: 1;
+}
+.readable-projection .projector-character-rail {
+  display: none;
+}
+.readable-projection .projected-student-board {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  max-height: none;
+  overflow: hidden;
+  border: 1px solid #b4c1a6;
+  border-radius: 12px;
+  padding: 10px;
+  background: #f8faf4;
+}
+.readable-projection .status-board-heading {
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  color: #243425;
+  font-size: 14px;
+  gap: 6px;
+}
+.readable-projection .status-board-heading > span {
+  width: 100%;
+  font-size: 12px;
+  color: #3b4b36;
+}
+.readable-projection .class-status-board .status-tiles,
+.readable-projection .class-status-board.compact .status-tiles {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--board-columns), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--board-rows), minmax(0, 1fr));
+  gap: 7px;
+}
+.readable-projection .class-status-board .status-tile,
+.readable-projection .class-status-board.compact .status-tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  padding: 5px;
+  min-height: 0;
+  border-radius: 8px;
+}
+.readable-projection .class-status-board .status-person,
+.readable-projection .class-status-board.compact .status-person {
+  display: flex;
+  flex: 0 1 auto;
+  gap: 4px;
+  min-height: 0;
+}
+.readable-projection .class-status-board .status-person strong {
+  display: block;
+  font-weight: 700;
+  color: #172b20;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+.readable-projection .class-status-board .status-person > span {
+  font-size: min(20px, var(--board-font));
+  flex-shrink: 0;
+}
+.readable-projection .class-status-board .status-person small {
+  font-size: 14px;
+  color: #36572e;
+}
+.readable-projection .class-status-board .status-symbols,
+.readable-projection .class-status-board.compact .status-symbols {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  margin: 0;
+}
+.readable-projection .class-status-board .status-symbols button {
+  font-size: 15px;
+  line-height: 1;
+  padding: 0;
+  color: #76402f;
+}
+.readable-projection .class-status-board .status-symbols button:last-child {
+  color: #415c2f;
+}
+.readable-projection
+  .class-status-board
+  .warning-2
+  .status-symbols
+  button:last-child {
+  color: #912b20;
+}
+.readable-projection .class-status-board .is-absent {
+  opacity: 1;
+}
+.readable-projection .class-status-board .is-absent .status-person strong {
+  color: #525951;
+}
+.readable-projection.students-focused .projector-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+.readable-projection.students-focused .projector-scene {
+  display: none;
+}
+.readable-projection .time-finished {
+  margin: 0;
+  flex-shrink: 0;
+}
+@media (max-width: 800px) and (orientation: portrait) {
+  .readable-projection .projector-layout,
+  .readable-projection.board-small .projector-layout,
+  .readable-projection.board-large .projector-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) minmax(0, 45%);
+    gap: 6px;
+  }
+  .readable-projection.students-focused .projector-layout {
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .readable-projection > .projection-display-controls {
+    font-size: 11px;
+    gap: 5px;
+    padding: 5px;
+  }
+  .readable-projection .projection-display-controls .secondary {
+    padding: 5px;
+    font-size: 11px;
+  }
+  .readable-projection .projected-student-board {
+    padding: 5px;
+  }
+  .readable-projection .class-status-board .status-tile {
+    padding: 2px;
+  }
+  .readable-projection .status-board-heading > span {
+    display: none;
+  }
+  .readable-projection .class-status-board .status-person > span {
+    display: none;
+  }
+  .readable-projection .class-status-board .status-symbols button {
+    font-size: 11px;
+  }
+}
+.readable-projection .class-status-board .is-absent .status-person {
+  opacity: 1;
 }
