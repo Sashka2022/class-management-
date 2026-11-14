@@ -190,3 +190,19 @@ test("login and admin fit narrow screens", async ({ page }) => {
     page.getByRole("columnheader", { name: "לבבות מצטברים" }),
   ).toHaveCount(1);
 });
+
+test("login page links to the tutorial video, which is served as playable video", async ({
+  page,
+  request,
+}) => {
+  await page.goto("/");
+  const link = page.getByRole("link", { name: /צפייה בסרטון ההדרכה/ });
+  await expect(link).toBeVisible();
+  await expect(link).toHaveAttribute("href", "/kalei-kalut-tutorial.mp4");
+  await expect(link).toHaveAttribute("target", "_blank");
+  const response = await request.get("/kalei-kalut-tutorial.mp4", {
+    headers: { Range: "bytes=0-1023" },
+  });
+  expect([200, 206]).toContain(response.status());
+  expect(response.headers()["content-type"]).toContain("video/mp4");
+});

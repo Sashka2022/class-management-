@@ -1,0 +1,13 @@
+import { chromium } from "playwright";
+const b = await chromium.launch({executablePath:"/opt/pw-browsers/chromium-1243/chrome-linux64/chrome"});
+const ctx = await b.newContext({ viewport:{width:1920,height:1080}});
+const p = await ctx.newPage();
+await p.goto("http://localhost:5173/");
+await p.getByLabel("הכיתה שלי").selectOption({label:"כיתת דמה"});
+await p.getByRole("textbox",{name:"סיסמה"}).fill("1111");
+await p.getByRole("button",{name:"נכנסים לכיתה"}).click();
+await p.waitForTimeout(1500);
+await p.screenshot({path:"work/s1.png"});
+console.log((await p.getByRole("button").allInnerTexts()).map(s=>s.replace(/\n/g," ")).join(" | "));
+console.log(p.url());
+await b.close();

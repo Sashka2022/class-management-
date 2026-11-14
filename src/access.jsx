@@ -16,6 +16,7 @@ import {
   Check,
   Eye,
   EyeOff,
+  PlayCircle,
 } from "lucide-react";
 import {
   classrooms,
@@ -284,6 +285,15 @@ export function Login({ onLogin, requestedClass, admin = false, onPair }) {
           >
             חיבור עם קוד ממחשב המורה
           </button>
+          <a
+            className="secondary pair-entry tutorial-link"
+            href="/kalei-kalut-tutorial.mp4"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <PlayCircle size={18} />
+            צפייה בסרטון ההדרכה (כשתי דקות)
+          </a>
           <p className="login-disclaimer">
             הכניסה בסיסמה משותפת מיועדת להדגמה. השתמשו בנתוני דוגמה בלבד.
           </p>
